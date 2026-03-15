@@ -1,16 +1,15 @@
 type Props = {
   available: boolean;
+  onClick?: () => void;
 };
 
-export function RentButton({ available }: Props) {
+export function RentButton({ available, onClick }: Props) {
   return (
     <button
+      type="button"
       disabled={!available}
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-        available
-          ? "bg-yellow-400 hover:bg-yellow-500 text-black"
-          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-      }`}
+      onClick={onClick}
+      className="rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
     >
       Арендовать
     </button>

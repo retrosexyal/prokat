@@ -7,11 +7,22 @@ import { toProductViews } from "@/lib/product-mappers";
 import type { UserType } from "@/types";
 import type { ProductDoc, ProductView } from "@/types/product";
 import { UserProductForm } from "./UserProductForm";
+import { getBookingsForOwner } from "@/lib/bookings";
+import { toBookingViews } from "@/lib/booking-mappers";
+import type { BookingView } from "@/types/booking";
+import { ProfileSettings } from "@/components/ProfileSettings";
+
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
   let myProducts: ProductDoc[] = [];
+  let myBookings: BookingView[] = [];
+  let userProfile: Pick<UserType, "name" | "phone" | "showPhoneInProducts"> = {
+    name: "",
+    phone: "",
+    showPhoneInProducts: false,
+  };
 
   if (session?.user?.email) {
     const client = await clientPromise;
@@ -23,6 +34,15 @@ export default async function DashboardPage() {
 
     if (user?._id) {
       myProducts = await getProductsByOwner(String(user._id));
+
+      const ownerBookings = await getBookingsForOwner(String(user._id));
+      myBookings = toBookingViews(ownerBookings);
+
+      userProfile = {
+        name: user.name ?? "",
+        phone: user.phone ?? "",
+        showPhoneInProducts: Boolean(user.showPhoneInProducts),
+      };
     }
   }
 
@@ -40,7 +60,16 @@ export default async function DashboardPage() {
 
       <LogoutButton />
 
-      <UserProductForm initialProducts={initialProducts} />
+      <ProfileSettings
+        initialName={userProfile.name}
+        initialPhone={userProfile.phone}
+        initialShowPhoneInProducts={userProfile.showPhoneInProducts}
+      />
+
+      <UserProductForm
+        initialProducts={initialProducts}
+        initialBookings={myBookings}
+      />
     </div>
   );
 }

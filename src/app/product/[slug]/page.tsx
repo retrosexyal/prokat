@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProductBySlug } from "@/lib/products";
 import { ProductGallery } from "@/components/ProductGallery";
+import { ProductBookingForm } from "@/components/ProductBookingForm";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -56,7 +57,7 @@ export default async function ProductPage({ params }: Props) {
       priceCurrency: "BYN",
       price: p.pricePerDayBYN,
       availability: "https://schema.org/InStock",
-      url: `https://prokat.net.by/product/${p.slug}`,
+      url: `https://prokat.by/product/${p.slug}`,
     },
   };
 
@@ -213,9 +214,12 @@ export default async function ProductPage({ params }: Props) {
             </p> */}
             <p className="mt-1 text-sm text-zinc-600">Город: {p.city}</p>
 
-            <button className="mt-5 w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent">
-              Забронировать
-            </button>
+            <div className="mt-5">
+              <ProductBookingForm
+                productId={p._id!.toString()}
+                minDays={p.minDays}
+              />
+            </div>
           </div>
 
           <div className="rounded-2xl border border-border-subtle bg-white p-4 text-sm text-zinc-600 shadow-sm">

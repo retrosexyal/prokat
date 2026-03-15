@@ -59,6 +59,8 @@ export default async function HomePage() {
               images={p.images}
               pricePerDay={p.pricePerDayBYN}
               available
+              minDays={1}
+              productId={p._id?.toString() || ""}
             />
           ))}
         </div>
@@ -73,7 +75,7 @@ export default async function HomePage() {
           {[
             "Выбираете товар и дату аренды",
             "Бронируем и подтверждаем условия",
-            "Забираете товар в пункте выдачи",
+            "Получаем товар",
             "Возвращаете вовремя и без штрафов",
           ].map((s, i) => (
             <div

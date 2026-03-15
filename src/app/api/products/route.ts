@@ -87,7 +87,6 @@ export async function POST(request: Request) {
     !slug ||
     !category ||
     !short ||
-    !organization ||
     !city ||
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
@@ -146,6 +145,7 @@ export async function POST(request: Request) {
     images,
     imagePublicIds,
     status: "pending",
+    ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
   });
 
   const serialized: ProductView = toProductView(product);

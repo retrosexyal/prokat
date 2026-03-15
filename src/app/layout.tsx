@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Prokat.net.by — прокат товаров в Могилёве",
+  title: "Prokat.by — прокат товаров в Могилёве",
   description: "Прокат инструментов и полезных вещей без залога.",
 };
 

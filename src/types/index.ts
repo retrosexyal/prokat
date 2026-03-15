@@ -9,4 +9,7 @@ export type UserType = {
   verifySentAt: Date;
   _id: Condition<ObjectId>;
   name?: string;
+  phone?: string;
+  phoneVerified?: boolean;
+  showPhoneInProducts?: boolean;
 };

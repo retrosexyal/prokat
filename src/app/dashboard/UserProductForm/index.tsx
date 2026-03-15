@@ -12,9 +12,11 @@ import { emptyProductForm } from "@/types/product-form";
 import { ProductCard } from "@/components/ProductCard";
 import { Modal } from "@/components/ui/Modal";
 import { DeleteProductConfirm } from "./DeleteProductConfirm";
+import { BookingView } from "@/types/booking";
 
 type Props = {
   initialProducts: ProductView[];
+  initialBookings: BookingView[];
 };
 
 const MAX_IMAGES = 10;
@@ -28,7 +30,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export function UserProductForm({ initialProducts }: Props) {
+export function UserProductForm({ initialProducts, initialBookings }: Props) {
   const router = useRouter();
 
   const [products, setProducts] = useState<ProductView[]>(initialProducts);
@@ -41,6 +43,7 @@ export function UserProductForm({ initialProducts }: Props) {
   const [productToDelete, setProductToDelete] = useState<ProductView | null>(
     null,
   );
+  const [bookings] = useState<BookingView[]>(initialBookings);
 
   useEffect(() => {
     if (imageFiles.length === 0) {
@@ -408,6 +411,8 @@ export function UserProductForm({ initialProducts }: Props) {
                       images={images}
                       pricePerDay={product.pricePerDayBYN}
                       available={product.status === "approved"}
+                      minDays={1}
+                      productId={product._id?.toString() || ""}
                     />
 
                     <div className="mt-2 px-1 text-sm text-zinc-500">
@@ -416,6 +421,54 @@ export function UserProductForm({ initialProducts }: Props) {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xl font-medium">Бронирования моих товаров</h2>
+
+          {bookings.length === 0 ? (
+            <div className="text-sm text-muted">Пока нет бронирований</div>
+          ) : (
+            <div className="space-y-3">
+              {bookings.map((booking) => (
+                <div
+                  key={booking._id}
+                  className="rounded-xl border border-border-subtle bg-white p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="text-base font-semibold text-zinc-900">
+                        {booking.product?.name ?? "Товар"}
+                      </div>
+
+                      <div className="text-sm text-zinc-600">
+                        Телефон: {booking.phone}
+                      </div>
+
+                      <div className="text-sm text-zinc-600">
+                        Email: {booking.renterEmail}
+                      </div>
+
+                      <div className="text-sm text-zinc-600">
+                        Даты: {booking.startDate.slice(0, 10)} —{" "}
+                        {booking.endDate.slice(0, 10)}
+                      </div>
+
+                      {booking.message ? (
+                        <div className="text-sm text-zinc-600">
+                          Сообщение: {booking.message}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="text-sm text-zinc-500">
+                      Статус: {booking.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

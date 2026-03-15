@@ -46,6 +46,8 @@ export default async function CatalogPage() {
               images={p.images}
               pricePerDay={p.pricePerDayBYN}
               available={true}
+              minDays={1}
+              productId={p._id?.toString() || ""}
             />
           ))}
         </div>

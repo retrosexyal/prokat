@@ -20,6 +20,7 @@ export type ProductDoc = {
   status: ProductStatus;
   createdAt: Date;
   updatedAt: Date;
+  ownerPhone?: string;
 };
 
 export type ProductView = {
@@ -40,4 +41,5 @@ export type ProductView = {
   status: ProductStatus;
   createdAt: string;
   updatedAt: string;
+  ownerPhone?: string;
 };

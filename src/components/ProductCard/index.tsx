@@ -6,22 +6,27 @@ import { AvailabilityBadge } from "../AvailabilityBadge";
 import { PriceBlock } from "../PriceBlock";
 import { RentButton } from "../RentButton";
 import { Modal } from "../ui/Modal";
+import { ProductBookingForm } from "../ProductBookingForm";
 
 type Props = {
+  productId: string;
   name: string;
   slug: string;
   images?: string[];
   pricePerDay: number;
+  minDays: number;
   available: boolean;
 };
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
 
 export function ProductCard({
+  productId,
   name,
   slug,
   images = [],
   pricePerDay,
+  minDays,
   available,
 }: Props) {
   const normalizedImages = useMemo(() => {
@@ -31,6 +36,7 @@ export function ProductCard({
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   const effectSelect = useEffectEvent(() => setSelectedIndex(0));
 
@@ -101,7 +107,11 @@ export function ProductCard({
           </div>
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-            <RentButton available={available} />
+            <RentButton
+              available={available}
+              onClick={() => setIsBookingModalOpen(true)}
+            />
+
             <Link
               href={`/product/${slug}`}
               className="text-sm text-gray-500 hover:text-black"
@@ -156,10 +166,20 @@ export function ProductCard({
           ) : null}
         </div>
       </Modal>
+
+      <Modal
+        open={isBookingModalOpen}
+        title={`Бронирование: ${name}`}
+        onClose={() => setIsBookingModalOpen(false)}
+        panelClassName="w-full max-w-2xl rounded-2xl bg-white p-4 shadow-xl sm:p-6"
+      >
+        <ProductBookingForm productId={productId} minDays={minDays} />
+      </Modal>
     </>
   );
 }
-/* const effectSelect = useEffectEvent(() => setSelectedIndex(0));
+
+/*   const effectSelect = useEffectEvent(() => setSelectedIndex(0));
 
   useEffect(() => {
     effectSelect();
