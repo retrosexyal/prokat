@@ -8,4 +8,5 @@ export type UserType = {
   verifyToken: string;
   verifySentAt: Date;
   _id: Condition<ObjectId>;
+  name?: string;
 };

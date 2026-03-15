@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { getProducts } from "@/lib/products";
+import { getApprovedProducts } from "@/lib/products";
 
 export default async function HomePage() {
-  const products = await getProducts();
+  const products = await getApprovedProducts();
   return (
     <>
       {/* HERO */}
@@ -10,8 +10,7 @@ export default async function HomePage() {
         <div className="max-w-2xl">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-zinc-900">
             Прокат строительной техники
-            <br />
-            и бытовых товаров в Могилёве
+            <br />и бытовых товаров в Могилёве
           </h1>
 
           <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-600 max-w-xl">
@@ -58,7 +57,7 @@ export default async function HomePage() {
             >
               <div className="p-4">
                 <h3 className="font-semibold text-sm sm:text-base text-zinc-900 line-clamp-2">
-                {p.name}
+                  {p.name}
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-zinc-500 line-clamp-2">
                   {p.short}

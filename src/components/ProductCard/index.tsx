@@ -3,7 +3,6 @@ import { AvailabilityBadge } from "../AvailabilityBadge";
 import { PriceBlock } from "../PriceBlock";
 import { RentButton } from "../RentButton";
 
-
 type Props = {
   name: string;
   slug: string;
@@ -24,7 +23,7 @@ export function ProductCard({
       {/* IMAGE */}
       <div className="relative bg-gray-50 aspect-[4/3] flex items-center justify-center">
         <img
-          src={image}
+          src={image || "/assets/no-image.webp"}
           alt={name}
           className="object-contain max-h-full"
         />
@@ -33,9 +32,7 @@ export function ProductCard({
 
       {/* CONTENT */}
       <div className="p-4 flex flex-col gap-3">
-        <h3 className="font-medium leading-snug line-clamp-2">
-          {name}
-        </h3>
+        <h3 className="font-medium leading-snug line-clamp-2">{name}</h3>
 
         <PriceBlock pricePerDay={pricePerDay} />
 
