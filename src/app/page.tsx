@@ -1,88 +1,110 @@
 import Link from "next/link";
-import { products } from "@/data/products";
+import { getProducts } from "@/lib/products";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const products = await getProducts();
   return (
     <>
       {/* HERO */}
-      <section className="mb-20">
-        <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-          Прокат товаров <br />
-          <span className="text-accent">без залога</span> в Могилёве
-        </h1>
+      <section className="mb-10 sm:mb-12 rounded-xl bg-gradient-to-r from-accent/30 via-accent/10 to-transparent px-4 py-6 sm:px-8 sm:py-8 border border-border-subtle">
+        <div className="max-w-2xl">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-zinc-900">
+            Прокат строительной техники
+            <br />
+            и бытовых товаров в Могилёве
+          </h1>
 
-        <p className="mt-6 text-muted max-w-xl">
-          Инструменты и полезные вещи для ремонта и быта.
-          Оплата сразу, понятные правила, без скрытых условий.
-        </p>
+          <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-600 max-w-xl">
+            Инструменты, уборочная техника и полезные вещи для ремонта и быта.
+            Без залога, с понятными условиями и быстрой выдачей.
+          </p>
 
-        <div className="mt-8 flex gap-4">
-          <Link
-            href="/catalog"
-            className="bg-accent text-black px-6 py-3 rounded-md font-medium"
-          >
-            Открыть каталог
-          </Link>
-          <Link
-            href="/terms"
-            className="border border-white/20 px-6 py-3 rounded-md"
-          >
-            Условия аренды
-          </Link>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/catalog"
+              className="inline-flex items-center justify-center rounded-full bg-accent-strong px-6 py-3 text-sm font-semibold text-black hover:bg-accent"
+            >
+              Открыть каталог
+            </Link>
+            <Link
+              href="/terms"
+              className="inline-flex items-center justify-center rounded-full border border-border-subtle bg-white px-6 py-3 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              Условия аренды
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* POPULAR */}
       <section>
-        <h2 className="text-2xl font-semibold mb-6">
-          Популярные товары
-        </h2>
+        <div className="flex items-baseline justify-between mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900">
+            Популярные товары
+          </h2>
+          <Link
+            href="/catalog"
+            className="hidden sm:inline text-xs font-medium text-accent-strong hover:text-accent"
+          >
+            Смотреть весь каталог
+          </Link>
+        </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.slice(0, 6).map(p => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {products.slice(0, 6).map((p) => (
             <div
-              key={p.id}
-              className="bg-card border border-white/10 rounded-lg p-5 hover:border-accent/50 transition"
+              key={p._id?.toString() ?? p.slug}
+              className="bg-white rounded-xl border border-border-subtle shadow-sm hover:shadow-md transition-shadow"
             >
-              <h3 className="font-semibold">{p.name}</h3>
-              <p className="text-sm text-muted mt-2">{p.short}</p>
+              <div className="p-4">
+                <h3 className="font-semibold text-sm sm:text-base text-zinc-900 line-clamp-2">
+                {p.name}
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-zinc-500 line-clamp-2">
+                  {p.short}
+                </p>
 
-              <div className="mt-4">
-                <span className="text-lg font-semibold">
-                  {p.pricePerDayBYN} BYN
-                </span>
-                <span className="text-sm text-muted"> / сутки</span>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-lg font-semibold text-zinc-900">
+                    {p.pricePerDayBYN} BYN
+                  </span>
+                  <span className="text-xs sm:text-sm text-zinc-500">
+                    / сутки
+                  </span>
+                </div>
+
+                <Link
+                  href={`/product/${p.slug}`}
+                  className="mt-4 inline-flex text-xs sm:text-sm font-medium text-accent-strong hover:text-accent"
+                >
+                  Подробнее
+                </Link>
               </div>
-
-              <Link
-                href={`/product/${p.slug}`}
-                className="inline-block mt-4 text-accent text-sm"
-              >
-                Подробнее →
-              </Link>
             </div>
           ))}
         </div>
       </section>
 
       {/* HOW */}
-      <section className="mt-24">
-        <h2 className="text-2xl font-semibold mb-6">Как это работает</h2>
-        <div className="grid md:grid-cols-4 gap-6 text-sm">
+      <section className="mt-14 sm:mt-16">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-zinc-900">
+          Как это работает
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
           {[
-            "Выбираете товар",
-            "Оплачиваете сразу",
-            "Пользуетесь",
-            "Возвращаете вовремя",
+            "Выбираете товар и дату аренды",
+            "Бронируем и подтверждаем условия",
+            "Забираете товар в пункте выдачи",
+            "Возвращаете вовремя и без штрафов",
           ].map((s, i) => (
             <div
               key={i}
-              className="bg-card border border-white/10 rounded-lg p-5"
+              className="bg-white border border-border-subtle rounded-lg px-3 py-3 sm:px-4 sm:py-4"
             >
-              <div className="text-accent font-semibold mb-2">
-                {i + 1}.
+              <div className="text-accent-strong font-semibold mb-1 sm:mb-2">
+                {i + 1}
               </div>
-              {s}
+              <p className="text-zinc-700">{s}</p>
             </div>
           ))}
         </div>

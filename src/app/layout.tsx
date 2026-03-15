@@ -10,27 +10,91 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
-      <body>
-        <header className="border-b border-white/10">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <Link href="/" className="text-xl font-semibold">
-              Prokat<span className="text-accent">.net.by</span>
+      <body className="bg-background text-foreground">
+        {/* TOP STRIP */}
+        <div className="bg-accent text-xs sm:text-sm text-black">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
+            <span className="font-medium">
+              Новый сервис · взять в аренду за 3 минуты
+            </span>
+            <span className="hidden sm:inline">
+              Могилёв · Быстрая выдача и понятные условия
+            </span>
+          </div>
+        </div>
+
+        {/* MAIN HEADER */}
+        <header className="bg-header border-b border-border-subtle">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent text-black font-bold text-lg">
+                P
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-lg font-semibold">Prokat.net.by</span>
+                <span className="text-[11px] text-zinc-500">
+                  Товары в аренду · Могилёв
+                </span>
+              </div>
             </Link>
-            <nav className="flex gap-6 text-sm text-muted">
-              <Link href="/catalog">Каталог</Link>
-              <Link href="/terms">Условия</Link>
-              <Link href="/responsibility">Ответственность</Link>
+
+            {/* SEARCH (desktop) */}
+            <form className="hidden md:flex flex-1 max-w-md items-center gap-2">
+              <input
+                type="search"
+                placeholder="Поиск по каталогу"
+                className="w-full rounded-full border border-border-subtle bg-white px-4 py-2 text-sm outline-none focus:border-accent-strong"
+              />
+            </form>
+
+            <nav className="flex items-center gap-3 text-xs sm:text-sm">
+              <Link
+                href="/catalog"
+                className="hidden sm:inline-flex px-3 py-2 rounded-md hover:bg-zinc-100"
+              >
+                Каталог
+              </Link>
+              <Link
+                href="/terms"
+                className="hidden md:inline-flex px-3 py-2 rounded-md hover:bg-zinc-100"
+              >
+                Условия
+              </Link>
+              <Link
+                href="/responsibility"
+                className="hidden md:inline-flex px-3 py-2 rounded-md hover:bg-zinc-100"
+              >
+                Ответственность
+              </Link>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center rounded-full border border-accent-strong bg-accent px-4 py-2 text-xs sm:text-sm font-medium text-black hover:bg-accent-strong"
+              >
+                Личный кабинет
+              </Link>
             </nav>
+          </div>
+
+          {/* SEARCH (mobile) */}
+          <div className="md:hidden border-t border-border-subtle">
+            <div className="max-w-6xl mx-auto px-4 py-3">
+              <input
+                type="search"
+                placeholder="Поиск по каталогу"
+                className="w-full rounded-full border border-border-subtle bg-white px-4 py-2 text-sm outline-none focus:border-accent-strong"
+              />
+            </div>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-10">
+        <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
           {children}
         </main>
 
-        <footer className="border-t border-white/10 mt-20">
-          <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-muted">
-            © {new Date().getFullYear()} Prokat.net.by · Могилёв
+        <footer className="border-t border-border-subtle mt-10 bg-header">
+          <div className="max-w-6xl mx-auto px-4 py-6 text-xs sm:text-sm text-zinc-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <span>© {new Date().getFullYear()} Prokat.net.by · Могилёв</span>
+            <span>Прокат товаров без залога · Telegram / WhatsApp по запросу</span>
           </div>
         </footer>
       </body>
