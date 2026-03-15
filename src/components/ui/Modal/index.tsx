@@ -8,9 +8,16 @@ type Props = {
   title?: string;
   children: React.ReactNode;
   onClose: () => void;
+  panelClassName?: string;
 };
 
-export function Modal({ open, title, children, onClose }: Props) {
+export function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  panelClassName = "w-full max-w-md rounded-2xl bg-white p-6 shadow-xl",
+}: Props) {
   useEffect(() => {
     if (!open) {
       return;
@@ -52,10 +59,10 @@ export function Modal({ open, title, children, onClose }: Props) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className={panelClassName}
         onClick={(event) => event.stopPropagation()}
       >
         {title ? (

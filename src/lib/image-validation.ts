@@ -39,7 +39,11 @@ async function getImageDimensions(
 }
 
 export async function validateImageFile(file: File): Promise<string | null> {
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
+  if (
+    !ALLOWED_IMAGE_TYPES.includes(
+      file.type as (typeof ALLOWED_IMAGE_TYPES)[number],
+    )
+  ) {
     return "Разрешены только JPG, PNG и WEBP";
   }
 
@@ -49,8 +53,8 @@ export async function validateImageFile(file: File): Promise<string | null> {
 
   const { width, height } = await getImageDimensions(file);
 
-  if (width < 300 || height < 300) {
-    return "Минимальный размер изображения: 300x300";
+  if (width < 1 || height < 1) {
+    return "Минимальный размер изображения: 1x1";
   }
 
   return null;

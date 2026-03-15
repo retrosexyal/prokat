@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getApprovedProducts } from "@/lib/products";
+import { ProductCard } from "@/components/ProductCard";
 
 export default async function HomePage() {
   const products = await getApprovedProducts();
@@ -49,37 +50,16 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 items-stretch">
           {products.slice(0, 6).map((p) => (
-            <div
+            <ProductCard
               key={p._id?.toString() ?? p.slug}
-              className="bg-white rounded-xl border border-border-subtle shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="p-4">
-                <h3 className="font-semibold text-sm sm:text-base text-zinc-900 line-clamp-2">
-                  {p.name}
-                </h3>
-                <p className="mt-2 text-xs sm:text-sm text-zinc-500 line-clamp-2">
-                  {p.short}
-                </p>
-
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-lg font-semibold text-zinc-900">
-                    {p.pricePerDayBYN} BYN
-                  </span>
-                  <span className="text-xs sm:text-sm text-zinc-500">
-                    / сутки
-                  </span>
-                </div>
-
-                <Link
-                  href={`/product/${p.slug}`}
-                  className="mt-4 inline-flex text-xs sm:text-sm font-medium text-accent-strong hover:text-accent"
-                >
-                  Подробнее
-                </Link>
-              </div>
-            </div>
+              name={p.name}
+              slug={p.slug}
+              images={p.images}
+              pricePerDay={p.pricePerDayBYN}
+              available
+            />
           ))}
         </div>
       </section>

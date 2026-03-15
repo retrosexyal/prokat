@@ -17,6 +17,8 @@ type Props = {
   initialProducts: ProductView[];
 };
 
+const MAX_IMAGES = 10;
+
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { error?: string } | undefined;
@@ -31,8 +33,8 @@ export function UserProductForm({ initialProducts }: Props) {
 
   const [products, setProducts] = useState<ProductView[]>(initialProducts);
   const [form, setForm] = useState<ProductFormValues>(emptyProductForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -41,46 +43,59 @@ export function UserProductForm({ initialProducts }: Props) {
   );
 
   useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl("");
+    if (imageFiles.length === 0) {
+      setPreviewUrls([]);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setPreviewUrl(objectUrl);
+    const objectUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(objectUrls);
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [imageFile]);
+  }, [imageFiles]);
 
   async function handleFileChange(
     event: React.ChangeEvent<HTMLInputElement>,
   ): Promise<void> {
     setError("");
 
-    const file = event.target.files?.[0] ?? null;
+    const selectedFiles = Array.from(event.target.files ?? []);
 
-    if (!file) {
-      setImageFile(null);
+    if (selectedFiles.length === 0) {
       return;
     }
 
-    const validationError = await validateImageFile(file);
+    const nextFiles = [...imageFiles, ...selectedFiles];
 
-    if (validationError) {
-      setImageFile(null);
+    if (nextFiles.length > MAX_IMAGES) {
       event.target.value = "";
-      setError(validationError);
+      setError(`Можно загрузить не более ${MAX_IMAGES} изображений`);
       return;
     }
 
-    setImageFile(file);
+    for (const file of selectedFiles) {
+      const validationError = await validateImageFile(file);
+
+      if (validationError) {
+        event.target.value = "";
+        setError(`Файл "${file.name}": ${validationError}`);
+        return;
+      }
+    }
+
+    setImageFiles(nextFiles);
+    event.target.value = "";
   }
 
-  function removeSelectedImage(): void {
-    setImageFile(null);
-    setPreviewUrl("");
+  function removeSelectedImage(index: number): void {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removeAllImages(): void {
+    setImageFiles([]);
+    setPreviewUrls([]);
   }
 
   async function handleSubmit(
@@ -103,9 +118,9 @@ export function UserProductForm({ initialProducts }: Props) {
       formData.append("minDays", String(form.minDays));
       formData.append("city", form.city);
 
-      if (imageFile) {
-        formData.append("file", imageFile);
-      }
+      imageFiles.forEach((file) => {
+        formData.append("files", file);
+      });
 
       const response = await api.post<ProductView>(
         API_ROUTES.products,
@@ -119,8 +134,8 @@ export function UserProductForm({ initialProducts }: Props) {
 
       setProducts((prev) => [response.data, ...prev]);
       setForm(emptyProductForm);
-      setImageFile(null);
-      setPreviewUrl("");
+      setImageFiles([]);
+      setPreviewUrls([]);
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка сохранения товара"));
@@ -303,27 +318,42 @@ export function UserProductForm({ initialProducts }: Props) {
             </label>
 
             <div className="flex flex-col gap-2 text-xs sm:text-sm sm:col-span-2">
-              <span>Изображение</span>
+              <span>Изображения (до {MAX_IMAGES})</span>
 
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple
                 onChange={handleFileChange}
               />
 
-              {previewUrl ? (
-                <div className="space-y-2">
-                  <img
-                    src={previewUrl}
-                    alt="Предпросмотр"
-                    className="h-40 w-40 rounded-lg border object-cover"
-                  />
+              {previewUrls.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    {previewUrls.map((url, index) => (
+                      <div key={`${url}-${index}`} className="space-y-2">
+                        <img
+                          src={url}
+                          alt={`Предпросмотр ${index + 1}`}
+                          className="h-40 w-full rounded-lg border object-cover"
+                        />
+                        <button
+                          type="button"
+                          className="text-xs text-red-600"
+                          onClick={() => removeSelectedImage(index)}
+                        >
+                          Убрать
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
                   <button
                     type="button"
                     className="text-xs text-red-600"
-                    onClick={removeSelectedImage}
+                    onClick={removeAllImages}
                   >
-                    Убрать изображение
+                    Убрать все изображения
                   </button>
                 </div>
               ) : null}
@@ -354,7 +384,7 @@ export function UserProductForm({ initialProducts }: Props) {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {products.map((product) => {
                 const productId = product._id;
-                const image = product.images[0];
+                const images = product.images;
 
                 return (
                   <div key={productId ?? product.slug} className="relative">
@@ -375,7 +405,7 @@ export function UserProductForm({ initialProducts }: Props) {
                     <ProductCard
                       name={product.name}
                       slug={product.slug}
-                      image={image}
+                      images={images}
                       pricePerDay={product.pricePerDayBYN}
                       available={product.status === "approved"}
                     />
@@ -390,6 +420,7 @@ export function UserProductForm({ initialProducts }: Props) {
           )}
         </section>
       </div>
+
       <Modal
         open={productToDelete !== null}
         title="Подтверждение удаления"

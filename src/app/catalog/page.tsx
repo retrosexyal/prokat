@@ -1,8 +1,8 @@
 import { ProductCard } from "@/components/ProductCard";
-import { getProducts } from "@/lib/products";
+import { getApprovedProducts } from "@/lib/products";
 
 export default async function CatalogPage() {
-  const products = await getProducts();
+  const products = await getApprovedProducts();
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       {/* SIDEBAR (desktop-like filters imitation) */}
@@ -43,7 +43,7 @@ export default async function CatalogPage() {
               key={p._id?.toString() ?? p.slug}
               name={p.name}
               slug={p.slug}
-              image={p.images[0] ?? "/img/no-image.webp"}
+              images={p.images}
               pricePerDay={p.pricePerDayBYN}
               available={true}
             />
