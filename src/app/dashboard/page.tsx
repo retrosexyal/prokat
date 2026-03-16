@@ -12,7 +12,6 @@ import { toBookingViews } from "@/lib/booking-mappers";
 import type { BookingView } from "@/types/booking";
 import { ProfileSettings } from "@/components/ProfileSettings";
 
-
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -50,15 +49,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Личный кабинет</h1>
+      <h1 className="text-2xl font-semibold text-center">Личный кабинет</h1>
 
-      <div className="text-sm text-muted">
+      <div className="text-sm text-muted mx-auto flex flex-col gap-2 max-w-sm text-center">
         {session?.user?.email
           ? `Вы вошли как ${session.user.email}`
           : "Вы вошли."}
+        <LogoutButton />
       </div>
-
-      <LogoutButton />
 
       <ProfileSettings
         initialName={userProfile.name}

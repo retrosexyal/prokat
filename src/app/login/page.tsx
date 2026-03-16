@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -32,20 +34,23 @@ export default function LoginPage() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <input
+    <form
+      onSubmit={onSubmit}
+      className="flex flex-1 flex-col p-4 gap-2 max-w-md mx-auto"
+    >
+      <Input
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="email"
         type="email"
       />
-      <input
+      <Input
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="password"
         type="password"
       />
-      <button type="submit">Войти</button>
+      <Button type="submit">Войти</Button>
       {err && <p>{err}</p>}
     </form>
   );

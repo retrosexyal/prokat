@@ -24,8 +24,6 @@ export const authOptions: NextAuthOptions = {
         const client = await clientPromise;
         const db = client.db();
 
-        console.log(db);
-
         const user = (await db.collection("users").findOne({
           email: credentials.email.toLowerCase(),
         })) as UserType;
