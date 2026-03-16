@@ -42,7 +42,9 @@ function getCategoryLabel(category: string): string {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const p = await getProductBySlug(slug);
+  const decodedSlug = decodeURIComponent(slug);
+
+  const p = await getProductBySlug(decodedSlug);
 
   if (!p) return notFound();
 

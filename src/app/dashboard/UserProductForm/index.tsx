@@ -194,18 +194,6 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
             </label>
 
             <label className="flex flex-col gap-1 text-xs sm:text-sm">
-              Slug
-              <input
-                className="rounded-md border px-2 py-1.5 text-sm"
-                value={form.slug}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, slug: event.target.value }))
-                }
-                required
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs sm:text-sm">
               Категория
               <select
                 className="rounded-md border px-2 py-1.5 text-sm"
@@ -224,21 +212,6 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
                 <option value="vacuum">Пылесосы</option>
                 <option value="other">Другое</option>
               </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs sm:text-sm">
-              Организация
-              <input
-                className="rounded-md border px-2 py-1.5 text-sm"
-                value={form.organization}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    organization: event.target.value,
-                  }))
-                }
-                required
-              />
             </label>
 
             <label className="flex flex-col gap-1 text-xs sm:text-sm">

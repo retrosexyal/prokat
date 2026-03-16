@@ -8,6 +8,7 @@ import { cloudinary } from "@/lib/cloudinary";
 import type { ProductDoc, ProductView } from "@/types/product";
 import type { UserType } from "@/types";
 import { toProductView } from "@/lib/product-mappers";
+import { generateUniqueSlug } from "@/lib/slug";
 
 const FREE_PRODUCTS_LIMIT = 3;
 const MAX_IMAGES = 10;
@@ -32,12 +33,12 @@ async function uploadImage(file: Blob): Promise<{
       {
         folder: "prokat-products",
         resource_type: "image",
+        format: "webp",
         transformation: [
           {
-            width: 600,
-            height: 600,
+            width: 1920,
+            height: 1440,
             crop: "limit",
-            fetch_format: "auto",
             quality: "auto",
           },
         ],
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
   const formData = await request.formData();
 
   const name = String(formData.get("name") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "").trim();
+
   const category = String(
     formData.get("category") ?? "",
   ).trim() as ProductDoc["category"];
@@ -84,7 +85,6 @@ export async function POST(request: Request) {
 
   if (
     !name ||
-    !slug ||
     !category ||
     !short ||
     !city ||
@@ -107,6 +107,8 @@ export async function POST(request: Request) {
 
   const client = await clientPromise;
   const db = client.db();
+
+  const slug = await generateUniqueSlug(db, name);
 
   const user = await db.collection<UserType>("users").findOne({
     email: session.user.email,
