@@ -8,7 +8,7 @@ export type ProductDoc = {
   ownerEmail?: string;
   name: string;
   slug: string;
-  category: "instrument" | "ladder" | "level" | "vacuum" | "other";
+  category: string;
   short: string;
   organization?: string;
   depositBYN: number;
@@ -29,7 +29,7 @@ export type ProductView = {
   ownerEmail?: string;
   name: string;
   slug: string;
-  category: "instrument" | "ladder" | "level" | "vacuum" | "other";
+  category: string;
   short: string;
   organization?: string;
   depositBYN: number;

@@ -4,16 +4,8 @@ import { redirect } from "next/navigation";
 import { getPendingProducts } from "@/lib/products";
 import { AdminModerationPanel } from "./AdminModerationPanel";
 import { toProductViews } from "@/lib/product-mappers";
-
-function isAdminEmail(email: string | null | undefined): boolean {
-  const adminEmail = process.env.ADMIN_EMAIL;
-
-  if (!adminEmail) {
-    return false;
-  }
-
-  return email?.toLowerCase() === adminEmail.toLowerCase();
-}
+import { isAdminEmail } from "@/lib/auth";
+import { CategoriesManager } from "./CategoriesManager";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
@@ -25,5 +17,10 @@ export default async function AdminPage() {
   const products = await getPendingProducts();
   const serializedProducts = toProductViews(products);
 
-  return <AdminModerationPanel initialProducts={serializedProducts} />;
+  return (
+    <div className="space-y-8">
+      <CategoriesManager />
+      <AdminModerationPanel initialProducts={serializedProducts} />
+    </div>
+  );
 }
