@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       : "/";
 
   await resend.emails.send({
-    from: "onboarding@resend.dev",
+    from: "Prokatik <noreply@mail.prokatik.by>",
     to: e,
     subject: "Verify your email",
     html: `

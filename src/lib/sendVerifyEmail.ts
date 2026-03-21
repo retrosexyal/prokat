@@ -29,7 +29,7 @@ export async function sendVerifyEmail(user: UserType, callbackUrl:string) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   await resend.emails.send({
-    from: "onboarding@resend.dev",
+    from: "Prokatik <noreply@mail.prokatik.by>",
     to: user.email,
     subject: "Verify your email",
     html: `

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { products } from "@/data/products";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://prokat.by";
+  const base = "https://Prokatik.by";
   return [
     { url: `${base}/`, lastModified: new Date() },
     { url: `${base}/catalog`, lastModified: new Date() },

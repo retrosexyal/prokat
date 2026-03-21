@@ -59,7 +59,7 @@ export default async function ProductPage({ params }: Props) {
       priceCurrency: "BYN",
       price: p.pricePerDayBYN,
       availability: "https://schema.org/InStock",
-      url: `https://prokat.by/product/${p.slug}`,
+      url: `https://Prokatik.by/product/${p.slug}`,
     },
   };
 
