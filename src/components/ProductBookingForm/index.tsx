@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import axios from "axios";
+import { DayPicker, DateRange } from "react-day-picker";
+import { ru } from "react-day-picker/locale";
+
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
+import { useIsMobile } from "@/hook";
 
 type BusyRange = {
   _id?: string;
@@ -38,8 +42,13 @@ function toInputDate(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
 function addDays(dateString: string, days: number): string {
-  const date = new Date(`${dateString}T12:00:00`);
+  const date = parseLocalDate(dateString);
   date.setDate(date.getDate() + days);
   return toInputDate(date);
 }
@@ -51,6 +60,141 @@ function rangesOverlap(
   endB: string,
 ): boolean {
   return startA <= endB && endA >= startB;
+}
+
+function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+type BookingCalendarModalProps = {
+  open: boolean;
+  onClose: () => void;
+  value?: DateRange;
+  onApply: (range: DateRange | undefined) => void;
+  bookedRanges: { from: Date; to: Date }[];
+  minDays: number;
+  isMobile: boolean;
+};
+
+function BookingCalendarModal({
+  open,
+  onClose,
+  value,
+  onApply,
+  bookedRanges,
+  minDays,
+  isMobile,
+}: BookingCalendarModalProps) {
+  const [draftRange, setDraftRange] = useState<DateRange | undefined>(value);
+
+  const effectDraft = useEffectEvent(() => {
+    setDraftRange(value);
+  });
+
+  useEffect(() => {
+    if (open) {
+      effectDraft();
+    }
+  }, [open, value]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4">
+      <div className="w-full rounded-t-3xl bg-white shadow-2xl sm:max-w-[760px] sm:rounded-3xl">
+        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-4 sm:px-5">
+          <div>
+            <div className="text-base font-semibold text-zinc-900">
+              Выбор дат аренды
+            </div>
+            <p className="mt-1 text-xs text-zinc-500">
+              Недоступные даты уже заблокированы
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-border-subtle px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Закрыть
+          </button>
+        </div>
+
+        <div className="max-h-[78vh] overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+            <DayPicker
+              locale={ru}
+              mode="range"
+              selected={draftRange}
+              onSelect={setDraftRange}
+              disabled={[{ before: startOfToday() }, ...bookedRanges]}
+              modifiers={{ booked: bookedRanges }}
+              modifiersClassNames={{ booked: "rdp-booked" }}
+              excludeDisabled
+              numberOfMonths={isMobile ? 1 : 2}
+              showOutsideDays
+              className="booking-calendar"
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-zinc-50 p-4">
+            <div className="text-sm font-medium text-zinc-900">
+              Выбранные даты
+            </div>
+
+            {!draftRange?.from ? (
+              <p className="mt-2 text-sm text-zinc-500">
+                Пока ничего не выбрано
+              </p>
+            ) : (
+              <div className="mt-2 space-y-1 text-sm text-zinc-700">
+                <p>
+                  <span className="font-medium text-zinc-900">Начало:</span>{" "}
+                  {formatDate(toInputDate(draftRange.from))}
+                </p>
+                <p>
+                  <span className="font-medium text-zinc-900">Окончание:</span>{" "}
+                  {draftRange.to
+                    ? formatDate(toInputDate(draftRange.to))
+                    : "выберите дату окончания"}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-3 text-xs text-zinc-600">
+              {minDays > 1 ? (
+                <p>Минимальный срок аренды: {minDays} дн.</p>
+              ) : (
+                <p>Можно выбрать один день аренды.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t border-border-subtle px-4 py-4 sm:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-full border border-border-subtle px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onApply(draftRange);
+              onClose();
+            }}
+            className="flex-1 rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent"
+          >
+            Применить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ProductBookingForm({
@@ -67,6 +211,9 @@ export function ProductBookingForm({
   const [loadingBusyDates, setLoadingBusyDates] = useState(true);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     let cancelled = false;
@@ -100,12 +247,33 @@ export function ProductBookingForm({
     };
   }, [productId]);
 
-  const conflictText = useMemo(() => {
-    if (!startDate || !endDate) {
-      return "";
-    }
+  const activeBusyRanges = useMemo(
+    () => busyRanges.filter((range) => range.status !== "cancelled"),
+    [busyRanges],
+  );
 
-    const hasConflict = busyRanges.some((range) =>
+  const bookedRanges = useMemo(
+    () =>
+      activeBusyRanges.map((range) => ({
+        from: parseLocalDate(range.startDate.slice(0, 10)),
+        to: parseLocalDate(range.endDate.slice(0, 10)),
+      })),
+    [activeBusyRanges],
+  );
+
+  const calendarValue = useMemo<DateRange | undefined>(() => {
+    if (!startDate) return undefined;
+
+    return {
+      from: parseLocalDate(startDate),
+      to: endDate ? parseLocalDate(endDate) : undefined,
+    };
+  }, [startDate, endDate]);
+
+  const conflictText = useMemo(() => {
+    if (!startDate || !endDate) return "";
+
+    const hasConflict = activeBusyRanges.some((range) =>
       rangesOverlap(
         startDate,
         endDate,
@@ -117,54 +285,36 @@ export function ProductBookingForm({
     return hasConflict
       ? "Этот диапазон пересекается с уже существующей бронью"
       : "";
-  }, [busyRanges, endDate, startDate]);
+  }, [activeBusyRanges, startDate, endDate]);
 
-  function syncEndDateFromStart(nextStartDate: string): string {
-    if (!nextStartDate) {
-      return "";
-    }
+  function applyCalendarRange(range: DateRange | undefined): void {
+    setError("");
+    setSuccess("");
 
-    return addDays(nextStartDate, Math.max(minDays - 1, 1));
-  }
-
-  function handleStartDateChange(nextStartDate: string): void {
-    setStartDate(nextStartDate);
-
-    if (!nextStartDate) {
+    if (!range?.from) {
+      setStartDate("");
       setEndDate("");
       return;
     }
 
-    if (!endDate) {
-      setEndDate(syncEndDateFromStart(nextStartDate));
+    const nextStart = toInputDate(range.from);
+    const nextEnd = range.to ? toInputDate(range.to) : "";
+
+    setStartDate(nextStart);
+
+    if (!nextEnd) {
+      setEndDate("");
       return;
     }
 
-    if (endDate < nextStartDate) {
-      setEndDate(syncEndDateFromStart(nextStartDate));
+    const minAllowedEnd = addDays(nextStart, minDays - 1);
+
+    if (nextEnd < minAllowedEnd) {
+      setEndDate(minAllowedEnd);
       return;
     }
 
-    const minEndDate = addDays(nextStartDate, minDays - 1);
-    if (endDate < minEndDate) {
-      setEndDate(minEndDate);
-    }
-  }
-
-  function handleEndDateChange(nextEndDate: string): void {
-    if (!startDate) {
-      setEndDate(nextEndDate);
-      return;
-    }
-
-    const minEndDate = addDays(startDate, minDays - 1);
-
-    if (nextEndDate < minEndDate) {
-      setEndDate(minEndDate);
-      return;
-    }
-
-    setEndDate(nextEndDate);
+    setEndDate(nextEnd);
   }
 
   async function handleSubmit(
@@ -181,6 +331,14 @@ export function ProductBookingForm({
       return;
     }
 
+    const today = toInputDate(startOfToday());
+
+    if (startDate < today || endDate < today) {
+      setError("Нельзя выбрать дату в прошлом");
+      setLoading(false);
+      return;
+    }
+
     const minEndDate = addDays(startDate, minDays - 1);
 
     if (endDate < minEndDate) {
@@ -193,7 +351,7 @@ export function ProductBookingForm({
       return;
     }
 
-    const hasConflict = busyRanges.some((range) =>
+    const hasConflict = activeBusyRanges.some((range) =>
       rangesOverlap(
         startDate,
         endDate,
@@ -234,140 +392,158 @@ export function ProductBookingForm({
     }
   }
 
-  const minEndDate = startDate ? addDays(startDate, minDays - 1) : "";
+  const selectedDaysCount =
+    startDate && endDate
+      ? Math.floor(
+          (parseLocalDate(endDate).getTime() -
+            parseLocalDate(startDate).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ) + 1
+      : 0;
+
+  const selectedLabel = !startDate
+    ? "Даты не выбраны"
+    : endDate
+      ? `${formatDate(startDate)} — ${formatDate(endDate)}`
+      : `${formatDate(startDate)} — выберите дату окончания`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {ownerPhone ? (
-        <div className="rounded-xl border border-border-subtle bg-zinc-50 p-3">
-          <div className="text-sm font-medium text-zinc-900">
-            Телефон владельца
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {ownerPhone ? (
+          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+            <div className="text-sm font-medium text-zinc-900">
+              Телефон владельца
+            </div>
+            <a
+              href={`tel:${ownerPhone}`}
+              className="mt-1 inline-block text-sm font-medium text-accent-strong hover:underline"
+            >
+              {ownerPhone}
+            </a>
+            <p className="mt-1 text-xs text-zinc-500">
+              Можете сразу позвонить для уточнения деталей аренды
+            </p>
           </div>
-          <a
-            href={`tel:${ownerPhone}`}
-            className="mt-1 inline-block text-sm text-accent-strong hover:underline"
-          >
-            {ownerPhone}
-          </a>
-          <p className="mt-1 text-xs text-zinc-500">
-            Можете сразу позвонить для уточнения деталей аренды
-          </p>
-        </div>
-      ) : null}
-      <div>
-        <label className="mb-1 block text-sm text-zinc-700">
-          Телефон для связи
-        </label>
-        <input
-          type="tel"
-          required
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-          className="w-full rounded-lg border border-border-subtle px-3 py-2 text-sm"
-          placeholder="+375 (29) 123-45-67"
-        />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm text-zinc-700">
-            Дата начала
-          </label>
-          <input
-            type="date"
-            required
-            value={startDate}
-            onChange={(event) => handleStartDateChange(event.target.value)}
-            className="w-full rounded-lg border border-border-subtle px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm text-zinc-700">
-            Дата окончания
-          </label>
-          <input
-            type="date"
-            required
-            value={endDate}
-            min={minEndDate || startDate || undefined}
-            onChange={(event) => handleEndDateChange(event.target.value)}
-            className="w-full rounded-lg border border-border-subtle px-3 py-2 text-sm"
-          />
-        </div>
-      </div>
-
-      <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600">
-        {minDays > 1 ? (
-          <p>Минимальный срок аренды: {minDays} дн.</p>
-        ) : (
-          <p>Можно выбрать один день аренды.</p>
-        )}
-
-        {startDate ? (
-          <p className="mt-1">
-            Минимально допустимая дата окончания:{" "}
-            <span className="font-medium text-zinc-800">
-              {formatDate(`${minEndDate || startDate}T00:00:00.000Z`)}
-            </span>
-          </p>
         ) : null}
-      </div>
 
-      <div>
-        <label className="mb-1 block text-sm text-zinc-700">
-          Сообщение владельцу
-        </label>
-        <textarea
-          rows={3}
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          className="w-full rounded-lg border border-border-subtle px-3 py-2 text-sm"
-          placeholder="Например: нужен с утра, могу забрать сам"
-        />
-      </div>
-
-      <div className="rounded-xl border border-border-subtle bg-white p-3">
-        <div className="mb-2 text-sm font-medium text-zinc-900">
-          Уже забронированные даты
+        <div>
+          <label className="mb-1.5 block text-sm text-zinc-700">
+            Телефон для связи
+          </label>
+          <input
+            type="tel"
+            required
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+            placeholder="+375 (29) 123-45-67"
+          />
         </div>
 
-        {loadingBusyDates ? (
-          <div className="text-sm text-zinc-500">Загрузка...</div>
-        ) : busyRanges.length === 0 ? (
-          <div className="text-sm text-zinc-500">
-            Пока нет активных бронирований
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {busyRanges.map((range) => (
-              <div
-                key={range._id ?? `${range.startDate}-${range.endDate}`}
-                className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700"
-              >
-                {formatDate(range.startDate)} — {formatDate(range.endDate)}
+        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium text-zinc-900">
+                Даты аренды
               </div>
-            ))}
+              <p className="mt-1 text-xs text-zinc-500">
+                Прошедшие и занятые даты недоступны
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              className="shrink-0 rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-black transition hover:bg-accent"
+            >
+              Выбрать
+            </button>
           </div>
-        )}
-      </div>
 
-      {conflictText ? (
-        <div className="text-sm text-red-600">{conflictText}</div>
-      ) : null}
+          <div className="mt-3 rounded-2xl bg-zinc-50 p-4">
+            <div className="text-sm font-medium text-zinc-900">
+              {selectedLabel}
+            </div>
 
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
-      {success ? (
-        <div className="text-sm text-emerald-600">{success}</div>
-      ) : null}
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
+              {selectedDaysCount > 0 ? (
+                <span>Дней: {selectedDaysCount}</span>
+              ) : null}
+              <span>
+                {minDays > 1
+                  ? `Минимальный срок: ${minDays} дн.`
+                  : "Можно выбрать один день"}
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading || loadingBusyDates}
-        className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
-      >
-        {loading ? "Отправка..." : "Забронировать"}
-      </button>
-    </form>
+        <div>
+          <label className="mb-1.5 block text-sm text-zinc-700">
+            Сообщение владельцу
+          </label>
+          <textarea
+            rows={3}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+            placeholder="Например: нужен с утра, могу забрать сам"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+          <div className="mb-2 text-sm font-medium text-zinc-900">
+            Уже забронированные даты
+          </div>
+
+          {loadingBusyDates ? (
+            <div className="text-sm text-zinc-500">Загрузка...</div>
+          ) : activeBusyRanges.length === 0 ? (
+            <div className="text-sm text-zinc-500">
+              Пока нет активных бронирований
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {activeBusyRanges.map((range) => (
+                <div
+                  key={range._id ?? `${range.startDate}-${range.endDate}`}
+                  className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700"
+                >
+                  {formatDate(range.startDate)} — {formatDate(range.endDate)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {conflictText ? (
+          <div className="text-sm text-red-600">{conflictText}</div>
+        ) : null}
+
+        {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        {success ? (
+          <div className="text-sm text-emerald-600">{success}</div>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={loading || loadingBusyDates}
+          className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
+        >
+          {loading ? "Отправка..." : "Забронировать"}
+        </button>
+      </form>
+
+      <BookingCalendarModal
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        value={calendarValue}
+        onApply={applyCalendarRange}
+        bookedRanges={bookedRanges}
+        minDays={minDays}
+        isMobile={isMobile}
+      />
+    </>
   );
 }

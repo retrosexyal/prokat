@@ -4,9 +4,9 @@ import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { AvailabilityBadge } from "../AvailabilityBadge";
 import { PriceBlock } from "../PriceBlock";
-import { RentButton } from "../RentButton";
 import { Modal } from "../ui/Modal";
 import { ProductBookingForm } from "../ProductBookingForm";
+import { Button } from "../ui/Button";
 
 type Props = {
   productId: string;
@@ -16,6 +16,8 @@ type Props = {
   pricePerDay: number;
   minDays: number;
   available: boolean;
+  ownerPhone?: string;
+  isHideButton?: boolean;
 };
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
@@ -28,6 +30,8 @@ export function ProductCard({
   pricePerDay,
   minDays,
   available,
+  ownerPhone,
+  isHideButton,
 }: Props) {
   const normalizedImages = useMemo(() => {
     const filtered = images.filter(Boolean);
@@ -107,10 +111,14 @@ export function ProductCard({
           </div>
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-            <RentButton
-              available={available}
-              onClick={() => setIsBookingModalOpen(true)}
-            />
+            {!isHideButton && (
+              <Button
+                disabled={!available}
+                onClick={() => setIsBookingModalOpen(true)}
+              >
+                Арендовать
+              </Button>
+            )}
 
             <Link
               href={`/product/${slug}`}
@@ -171,16 +179,14 @@ export function ProductCard({
         open={isBookingModalOpen}
         title={`Бронирование: ${name}`}
         onClose={() => setIsBookingModalOpen(false)}
-        panelClassName="w-full max-w-2xl rounded-2xl bg-white p-4 shadow-xl sm:p-6"
+        panelClassName="w-full max-w-2xl rounded-2xl p-4 shadow-xl sm:p-6 max-w-[680px] max-h-[90vh] overflow-y-auto bg-background"
       >
-        <ProductBookingForm productId={productId} minDays={minDays} />
+        <ProductBookingForm
+          productId={productId}
+          minDays={minDays}
+          ownerPhone={ownerPhone}
+        />
       </Modal>
     </>
   );
 }
-
-/*   const effectSelect = useEffectEvent(() => setSelectedIndex(0));
-
-  useEffect(() => {
-    effectSelect();
-  }, [images]); */

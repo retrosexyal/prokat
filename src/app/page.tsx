@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 
 export default async function HomePage() {
   const products = await getApprovedProducts();
+
   return (
     <>
       {/* HERO */}
@@ -61,6 +62,7 @@ export default async function HomePage() {
               available
               minDays={1}
               productId={p._id?.toString() || ""}
+              ownerPhone={p.ownerPhone}
             />
           ))}
         </div>

@@ -13,6 +13,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { Modal } from "@/components/ui/Modal";
 import { DeleteProductConfirm } from "./DeleteProductConfirm";
 import { BookingView } from "@/types/booking";
+import { FileDropzone } from "@/components/ui/FileDropzone";
 
 type Props = {
   initialProducts: ProductView[];
@@ -296,11 +297,18 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
             <div className="flex flex-col gap-2 text-xs sm:text-sm sm:col-span-2">
               <span>Изображения (до {MAX_IMAGES})</span>
 
-              <input
+              {/* <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
                 onChange={handleFileChange}
+              /> */}
+              <FileDropzone
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                maxFiles={MAX_IMAGES}
+                onChange={handleFileChange}
+                helperText="JPEG, PNG, WEBP"
               />
 
               {previewUrls.length > 0 ? (
@@ -386,6 +394,7 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
                       available={product.status === "approved"}
                       minDays={1}
                       productId={product._id?.toString() || ""}
+                      isHideButton
                     />
 
                     <div className="mt-2 px-1 text-sm text-zinc-500">
