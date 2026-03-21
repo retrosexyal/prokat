@@ -36,7 +36,7 @@ export default function RootLayout({
                 P
               </span>
               <div className="flex flex-col leading-tight">
-                <span className="text-lg font-semibold">Prokat.net.by</span>
+                <span className="text-lg font-semibold">Prokat.by</span>
                 <span className="text-[11px] text-zinc-500">
                   Товары в аренду · Могилёв
                 </span>
@@ -86,7 +86,7 @@ export default function RootLayout({
 
         <footer className="border-t border-border-subtle mt-10 bg-header">
           <div className="max-w-6xl mx-auto px-4 py-6 text-xs sm:text-sm text-zinc-500 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>© {new Date().getFullYear()} Prokat.net.by · Могилёв</span>
+            <span>© {new Date().getFullYear()} Prokat.by · Могилёв</span>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               <Link
