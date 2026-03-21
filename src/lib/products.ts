@@ -20,67 +20,119 @@ function getTodayRange(): { startOfDay: Date; endOfDay: Date } {
   return { startOfDay, endOfDay };
 }
 
-export async function getApprovedProductsWithAvailability(): Promise<
-  ApprovedProductWithAvailability[]
-> {
+export type GetApprovedProductsWithAvailabilityParams = {
+  category?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type GetApprovedProductsWithAvailabilityResult = {
+  products: ApprovedProductWithAvailability[];
+  totalProducts: number;
+  totalPages: number;
+  currentPage: number;
+};
+
+export async function getApprovedProductsWithAvailability(
+  params: GetApprovedProductsWithAvailabilityParams = {},
+): Promise<GetApprovedProductsWithAvailabilityResult> {
   const client = await clientPromise;
   const db = client.db();
 
   const { startOfDay, endOfDay } = getTodayRange();
 
-  const products = await db
+  const category = params.category?.trim() ?? "";
+  const limit = Math.max(params.limit ?? 12, 1);
+  const page = Math.max(params.page ?? 1, 1);
+  const skip = (page - 1) * limit;
+
+  const matchStage: Record<string, unknown> = {
+    status: "approved",
+  };
+
+  if (category) {
+    matchStage.category = category;
+  }
+
+  const result = await db
     .collection<ProductDoc>(COLLECTION)
     .aggregate([
       {
-        $match: {
-          status: "approved",
-        },
+        $match: matchStage,
       },
       {
-        $lookup: {
-          from: "bookings",
-          let: { productId: "$_id" },
-          pipeline: [
+        $facet: {
+          items: [
             {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$productId", "$$productId"] },
-                    { $eq: ["$status", "confirmed"] },
-                    { $lte: ["$startDate", endOfDay] },
-                    { $gte: ["$endDate", startOfDay] },
-                  ],
+              $sort: {
+                createdAt: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $lookup: {
+                from: "bookings",
+                let: { productId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ["$productId", "$$productId"] },
+                          { $eq: ["$status", "confirmed"] },
+                          { $lte: ["$startDate", endOfDay] },
+                          { $gte: ["$endDate", startOfDay] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $limit: 1,
+                  },
+                ],
+                as: "activeBookingsToday",
+              },
+            },
+            {
+              $addFields: {
+                isAvailableNow: {
+                  $eq: [{ $size: "$activeBookingsToday" }, 0],
                 },
               },
             },
             {
-              $limit: 1,
+              $project: {
+                activeBookingsToday: 0,
+              },
             },
           ],
-          as: "activeBookingsToday",
-        },
-      },
-      {
-        $addFields: {
-          isAvailableNow: {
-            $eq: [{ $size: "$activeBookingsToday" }, 0],
-          },
-        },
-      },
-      {
-        $project: {
-          activeBookingsToday: 0,
-        },
-      },
-      {
-        $sort: {
-          createdAt: -1,
+          totalCount: [
+            {
+              $count: "count",
+            },
+          ],
         },
       },
     ])
     .toArray();
 
-  return products as ApprovedProductWithAvailability[];
+  const first = result[0];
+  const products = (first?.items ?? []) as ApprovedProductWithAvailability[];
+  const totalProducts = first?.totalCount?.[0]?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalProducts / limit));
+  const currentPage = Math.min(page, totalPages);
+
+  return {
+    products,
+    totalProducts,
+    totalPages,
+    currentPage,
+  };
 }
 
 export async function getAllProductsForAdmin(): Promise<ProductDoc[]> {

@@ -11,13 +11,14 @@ export default async function HomePage() {
       <section className="mb-10 sm:mb-12 rounded-xl bg-gradient-to-r from-accent/30 via-accent/10 to-transparent px-4 py-6 sm:px-8 sm:py-8 border border-border-subtle">
         <div className="max-w-2xl">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-zinc-900">
-            Прокат строительной техники
-            <br />и бытовых товаров в Могилёве
+            Аренда товаров
+            <br />в Могилёве
           </h1>
 
           <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-600 max-w-xl">
-            Инструменты, уборочная техника и полезные вещи для ремонта и быта.
-            Без залога, с понятными условиями и быстрой выдачей.
+            Площадка объявлений для аренды товаров в Могилёве. Здесь можно найти
+            и разместить предложения для дома, ремонта, отдыха, мероприятий,
+            техники и других повседневных задач.
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -28,10 +29,10 @@ export default async function HomePage() {
               Открыть каталог
             </Link>
             <Link
-              href="/terms"
+              href="/dashboard"
               className="inline-flex items-center justify-center rounded-full border border-border-subtle bg-white px-6 py-3 text-sm text-zinc-700 hover:bg-zinc-50"
             >
-              Условия аренды
+              Разместить объявление
             </Link>
           </div>
         </div>

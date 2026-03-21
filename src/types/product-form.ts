@@ -16,7 +16,7 @@ export type ProductFormValues = {
 export const emptyProductForm: ProductFormValues = {
   name: "",
   slug: "",
-  category: "Другое",
+  category: "другое",
   short: "",
   organization: "",
   depositBYN: 0,

@@ -259,8 +259,8 @@ export function UserProductForm({
                   }))
                 }
               >
-                {categories.map(({ name }) => (
-                  <option value={name} key={name}>
+                {categories.map(({ name, slug }) => (
+                  <option value={slug} key={slug}>
                     {name}
                   </option>
                 ))}

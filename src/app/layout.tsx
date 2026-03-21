@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   description: "Прокат инструментов и полезных вещей без залога.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ru">
       <body className="bg-background text-foreground">
@@ -55,18 +59,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Каталог
               </Link>
               <Link
-                href="/terms"
-                className="hidden md:inline-flex px-3 py-2 rounded-md hover:bg-zinc-100"
-              >
-                Условия
-              </Link>
-              <Link
-                href="/responsibility"
-                className="hidden md:inline-flex px-3 py-2 rounded-md hover:bg-zinc-100"
-              >
-                Ответственность
-              </Link>
-              <Link
                 href="/dashboard"
                 className="inline-flex items-center rounded-full border border-accent-strong bg-accent px-4 py-2 text-xs sm:text-sm font-medium text-black hover:bg-accent-strong"
               >
@@ -87,14 +79,38 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
-          {children}
-        </main>
+        <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">{children}</main>
 
         <footer className="border-t border-border-subtle mt-10 bg-header">
-          <div className="max-w-6xl mx-auto px-4 py-6 text-xs sm:text-sm text-zinc-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="max-w-6xl mx-auto px-4 py-6 text-xs sm:text-sm text-zinc-500 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>© {new Date().getFullYear()} Prokat.net.by · Могилёв</span>
-            <span>Прокат товаров без залога · Telegram / WhatsApp по запросу</span>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              <Link
+                href="/terms"
+                className="hover:text-zinc-300 transition-colors"
+              >
+                Условия аренды
+              </Link>
+              <Link
+                href="/responsibility"
+                className="hover:text-zinc-300 transition-colors"
+              >
+                Ответственность арендатора
+              </Link>
+              <Link
+                href="/rules"
+                className="hover:text-zinc-300 transition-colors"
+              >
+                Правила размещения
+              </Link>
+              <Link
+                href="/agreement"
+                className="hover:text-zinc-300 transition-colors"
+              >
+                Пользовательское соглашение
+              </Link>
+            </div>
           </div>
         </footer>
       </body>

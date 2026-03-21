@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
-import {
-  getApprovedProducts,
-  getApprovedProductsWithAvailability,
-} from "@/lib/products";
+import { getApprovedProductsWithAvailability } from "@/lib/products";
 import { getAllCategories } from "@/lib/categories";
 
 type CatalogPageProps = {
@@ -24,24 +21,19 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     1,
   );
 
-  const [products, categories] = await Promise.all([
-    getApprovedProductsWithAvailability(),
+  const [
+    { products, totalProducts, totalPages, currentPage: safePage },
+    categories,
+  ] = await Promise.all([
+    getApprovedProductsWithAvailability({
+      category: selectedCategory || undefined,
+      page: currentPage,
+      limit: PRODUCTS_PER_PAGE,
+    }),
     getAllCategories(),
   ]);
 
-  const filteredProducts = selectedCategory
-    ? products.filter((product) => product.category === selectedCategory)
-    : products;
-
-  const totalProducts = filteredProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalProducts / PRODUCTS_PER_PAGE));
-  const safePage = Math.min(currentPage, totalPages);
-
-  const startIndex = (safePage - 1) * PRODUCTS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(
-    startIndex,
-    startIndex + PRODUCTS_PER_PAGE,
-  );
+  const paginatedProducts = products;
 
   const activeCategoryName =
     categories.find((item) => item.slug === selectedCategory)?.name ?? "";
