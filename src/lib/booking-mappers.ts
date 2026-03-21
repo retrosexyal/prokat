@@ -7,7 +7,7 @@ type BookingWithProduct = BookingDoc & {
 
 export function toBookingView(booking: BookingWithProduct): BookingView {
   return {
-    _id: booking._id?.toString(),
+    _id: booking._id?.toString() || "",
     productId: booking.productId.toString(),
     productOwnerId: booking.productOwnerId.toString(),
     renterId: booking.renterId.toString(),

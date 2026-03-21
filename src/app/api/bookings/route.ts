@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
-import { createBooking, getActiveBookingConflicts } from "@/lib/bookings";
+import { createBooking } from "@/lib/bookings";
 import { toBookingView } from "@/lib/booking-mappers";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
