@@ -216,7 +216,6 @@ export async function updateProduct(
   id: string,
   data: Partial<Omit<ProductDoc, "_id" | "createdAt">>,
 ): Promise<ProductDoc | null> {
-  console.log({ id, data });
   const client = await clientPromise;
   const db = client.db();
 

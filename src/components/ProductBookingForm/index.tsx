@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import {
+  SubmitEvent,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 import axios from "axios";
 import { DayPicker, DateRange } from "react-day-picker";
 import { ru } from "react-day-picker/locale";
@@ -8,6 +14,8 @@ import { ru } from "react-day-picker/locale";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import { useIsMobile } from "@/hook";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 type BusyRange = {
   _id?: string;
@@ -215,6 +223,32 @@ export function ProductBookingForm({
   const [error, setError] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { status } = useSession();
+
+  const bookingDraftStorageKey = `booking-draft:${productId}`;
+
+  function saveBookingDraft(): void {
+    if (typeof window === "undefined") return;
+
+    sessionStorage.setItem(
+      bookingDraftStorageKey,
+      JSON.stringify({
+        phone,
+        message,
+        startDate,
+        endDate,
+      }),
+    );
+  }
+
+  function getCurrentUrl(): string {
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }
+
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -320,7 +354,7 @@ export function ProductBookingForm({
   }
 
   async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
+    event: SubmitEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
     setLoading(true);
@@ -368,6 +402,15 @@ export function ProductBookingForm({
       return;
     }
 
+    if (status !== "authenticated") {
+      saveBookingDraft();
+
+      const callbackUrl = encodeURIComponent(getCurrentUrl());
+      router.push(`/login?callbackUrl=${callbackUrl}`);
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post(API_ROUTES.bookings, {
         productId,
@@ -383,12 +426,22 @@ export function ProductBookingForm({
       setStartDate("");
       setEndDate("");
 
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(bookingDraftStorageKey);
+      }
+
       const response = await api.get<BusyRange[]>(
         `${API_ROUTES.bookings}?productId=${encodeURIComponent(productId)}`,
       );
       setBusyRanges(response.data);
     } catch (error: unknown) {
-      setError(getApiErrorMessage(error, "Ошибка бронирования"));
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        saveBookingDraft();
+        const callbackUrl = encodeURIComponent(getCurrentUrl());
+        router.push(`/login?callbackUrl=${callbackUrl}`);
+      } else {
+        setError(getApiErrorMessage(error, "Ошибка бронирования"));
+      }
     } finally {
       setLoading(false);
     }
@@ -408,6 +461,40 @@ export function ProductBookingForm({
     : endDate
       ? `${formatDate(startDate)} — ${formatDate(endDate)}`
       : `${formatDate(startDate)} — выберите дату окончания`;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const raw = sessionStorage.getItem(bookingDraftStorageKey);
+    if (!raw) return;
+
+    try {
+      const draft = JSON.parse(raw) as {
+        phone?: string;
+        message?: string;
+        startDate?: string;
+        endDate?: string;
+      };
+
+      if (draft.phone) {
+        setPhone(draft.phone);
+      }
+
+      if (draft.message) {
+        setMessage(draft.message);
+      }
+
+      if (draft.startDate) {
+        setStartDate(draft.startDate);
+      }
+
+      if (draft.endDate) {
+        setEndDate(draft.endDate);
+      }
+    } catch {
+      sessionStorage.removeItem(bookingDraftStorageKey);
+    }
+  }, [bookingDraftStorageKey]);
 
   return (
     <>

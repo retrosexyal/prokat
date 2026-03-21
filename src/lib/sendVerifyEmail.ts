@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import clientPromise from "@/lib/mongodb";
 import { UserType } from "@/types";
 
-export async function sendVerifyEmail(user: UserType) {
+export async function sendVerifyEmail(user: UserType, callbackUrl:string) {
   const client = await clientPromise;
   const db = client.db();
 
@@ -33,7 +33,7 @@ export async function sendVerifyEmail(user: UserType) {
     to: user.email,
     subject: "Verify your email",
     html: `
-      <a href="${process.env.NEXTAUTH_URL}/api/verify?token=${verifyToken}">
+      <a href="${process.env.NEXTAUTH_URL}/api/verify?token=${verifyToken}&callbackUrl=${encodeURIComponent(callbackUrl)}">
       Verify account
       </a>
     `,

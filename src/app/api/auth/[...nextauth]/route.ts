@@ -14,6 +14,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
+        callbackUrl: { label: "Callback URL", type: "text" },
       },
 
       async authorize(credentials) {
@@ -28,19 +29,24 @@ export const authOptions: NextAuthOptions = {
           email: credentials.email.toLowerCase(),
         })) as UserType;
 
-        console.log(user);
 
         if (!user) return null;
 
-        console.log(user);
+
 
         const valid = await bcrypt.compare(credentials.password, user.password);
 
         if (!valid) return null;
 
         if (!user.verified) {
-          const r = await sendVerifyEmail(user);
+          const callbackUrl =
+            typeof credentials.callbackUrl === "string" &&
+            credentials.callbackUrl.startsWith("/") &&
+            !credentials.callbackUrl.startsWith("//")
+              ? credentials.callbackUrl
+              : "/";
 
+          const r = await sendVerifyEmail(user, callbackUrl);
           if (r.cooldown) {
             throw new Error("VERIFY_COOLDOWN");
           }

@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { Resend } from "resend";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const { email, password, callbackUrl } = await req.json();
 
   const e = String(email || "")
     .toLowerCase()
@@ -38,13 +38,20 @@ export async function POST(req: Request) {
 
   const resend = new Resend(process.env.RESEND_API_KEY);
 
+  const safeCallbackUrl =
+    typeof callbackUrl === "string" &&
+    callbackUrl.startsWith("/") &&
+    !callbackUrl.startsWith("//")
+      ? callbackUrl
+      : "/";
+
   await resend.emails.send({
     from: "onboarding@resend.dev",
     to: e,
     subject: "Verify your email",
     html: `
     Click here:
-    <a href="${process.env.NEXTAUTH_URL}/api/verify?token=${verifyToken}">
+    <a href="${process.env.NEXTAUTH_URL}/api/verify?token=${verifyToken}&callbackUrl=${encodeURIComponent(safeCallbackUrl)}">
       Verify account
     </a>
   `,

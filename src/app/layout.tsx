@@ -1,6 +1,7 @@
 import "./globals.css";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SessionProviderClient } from "@/components/providers/SessionProviderClient";
 
 export const metadata: Metadata = {
   title: "Prokat.by — прокат товаров в Могилёве",
@@ -79,7 +80,9 @@ export default function RootLayout({
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">{children}</main>
+        <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+          <SessionProviderClient>{children}</SessionProviderClient>
+        </main>
 
         <footer className="border-t border-border-subtle mt-10 bg-header">
           <div className="max-w-6xl mx-auto px-4 py-6 text-xs sm:text-sm text-zinc-500 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

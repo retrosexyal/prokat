@@ -51,8 +51,6 @@ export function AdminModerationPanel({ initialProducts }: Props) {
     }
   }
 
-  console.log(products);
-
   return (
     <section className="bg-white rounded-xl border border-border-subtle p-4 sm:p-6">
       <h1 className="text-xl sm:text-2xl font-semibold mb-4">
