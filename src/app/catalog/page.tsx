@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
-import { getApprovedProducts } from "@/lib/products";
+import {
+  getApprovedProducts,
+  getApprovedProductsWithAvailability,
+} from "@/lib/products";
 import { getAllCategories } from "@/lib/categories";
 
 type CatalogPageProps = {
@@ -12,16 +15,17 @@ type CatalogPageProps = {
 
 const PRODUCTS_PER_PAGE = 12;
 
-export default async function CatalogPage({
-  searchParams,
-}: CatalogPageProps) {
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const resolvedSearchParams = await searchParams;
 
   const selectedCategory = resolvedSearchParams?.category?.trim() ?? "";
-  const currentPage = Math.max(Number(resolvedSearchParams?.page ?? "1") || 1, 1);
+  const currentPage = Math.max(
+    Number(resolvedSearchParams?.page ?? "1") || 1,
+    1,
+  );
 
   const [products, categories] = await Promise.all([
-    getApprovedProducts(),
+    getApprovedProductsWithAvailability(),
     getAllCategories(),
   ]);
 
@@ -212,9 +216,11 @@ export default async function CatalogPage({
                   slug={product.slug}
                   images={product.images}
                   pricePerDay={product.pricePerDayBYN}
-                  available={true}
+                  available={product.isAvailableNow}
                   minDays={product.minDays ?? 1}
                   productId={product._id?.toString() || ""}
+                  pickupAddress={product.pickupAddress}
+                  ownerPhone={product.ownerPhone || ""}
                 />
               ))}
             </div>

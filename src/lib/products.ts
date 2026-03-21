@@ -4,6 +4,85 @@ import { ObjectId } from "mongodb";
 
 const COLLECTION = "products";
 
+export type ApprovedProductWithAvailability = ProductDoc & {
+  isAvailableNow: boolean;
+};
+
+function getTodayRange(): { startOfDay: Date; endOfDay: Date } {
+  const now = new Date();
+
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return { startOfDay, endOfDay };
+}
+
+export async function getApprovedProductsWithAvailability(): Promise<
+  ApprovedProductWithAvailability[]
+> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  const { startOfDay, endOfDay } = getTodayRange();
+
+  const products = await db
+    .collection<ProductDoc>(COLLECTION)
+    .aggregate([
+      {
+        $match: {
+          status: "approved",
+        },
+      },
+      {
+        $lookup: {
+          from: "bookings",
+          let: { productId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$productId", "$$productId"] },
+                    { $eq: ["$status", "confirmed"] },
+                    { $lte: ["$startDate", endOfDay] },
+                    { $gte: ["$endDate", startOfDay] },
+                  ],
+                },
+              },
+            },
+            {
+              $limit: 1,
+            },
+          ],
+          as: "activeBookingsToday",
+        },
+      },
+      {
+        $addFields: {
+          isAvailableNow: {
+            $eq: [{ $size: "$activeBookingsToday" }, 0],
+          },
+        },
+      },
+      {
+        $project: {
+          activeBookingsToday: 0,
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ])
+    .toArray();
+
+  return products as ApprovedProductWithAvailability[];
+}
+
 export async function getAllProductsForAdmin(): Promise<ProductDoc[]> {
   const client = await clientPromise;
   const db = client.db();

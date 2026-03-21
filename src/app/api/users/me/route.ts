@@ -8,6 +8,7 @@ type UpdateMeBody = {
   name?: string;
   phone?: string;
   showPhoneInProducts?: boolean;
+  pickupAddress?: string;
 };
 
 function normalizePhone(value: string): string {
@@ -24,21 +25,16 @@ export async function PATCH(request: Request) {
   const body = (await request.json()) as UpdateMeBody;
 
   const name = String(body.name ?? "").trim();
+  const pickupAddress = String(body.pickupAddress ?? "").trim();
   const phone = normalizePhone(String(body.phone ?? ""));
   const showPhoneInProducts = Boolean(body.showPhoneInProducts);
 
   if (!name) {
-    return NextResponse.json(
-      { error: "Укажите имя" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Укажите имя" }, { status: 400 });
   }
 
   if (!phone) {
-    return NextResponse.json(
-      { error: "Укажите телефон" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Укажите телефон" }, { status: 400 });
   }
 
   if (phone.length < 7) {
@@ -58,6 +54,7 @@ export async function PATCH(request: Request) {
         name,
         phone,
         showPhoneInProducts,
+        pickupAddress,
       },
     },
     { returnDocument: "after" },

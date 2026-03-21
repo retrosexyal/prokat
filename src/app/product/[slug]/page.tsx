@@ -78,7 +78,7 @@ export default async function ProductPage({ params }: Props) {
                       Доступно сейчас
                     </span>
                     <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
-                      {getCategoryLabel(p.category)}
+                      {p.category}
                     </span>
                     <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
                       {p.city}
@@ -149,14 +149,16 @@ export default async function ProductPage({ params }: Props) {
                         </dd>
                       </div>
 
-                      {/* <div>
-                        <dt className="text-xs uppercase tracking-wide text-zinc-400">
-                          Залог
-                        </dt>
-                        <dd className="mt-1 text-zinc-800">
-                          {p.depositBYN} BYN
-                        </dd>
-                      </div> */}
+                      {!!p.depositBYN && (
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-zinc-400">
+                            Залог
+                          </dt>
+                          <dd className="mt-1 text-zinc-800">
+                            {p.depositBYN} BYN
+                          </dd>
+                        </div>
+                      )}
 
                       <div>
                         <dt className="text-xs uppercase tracking-wide text-zinc-400">
@@ -165,7 +167,7 @@ export default async function ProductPage({ params }: Props) {
                         <dd className="mt-1 text-zinc-800">{p.minDays} дн.</dd>
                       </div>
 
-                      {p.organization ? (
+                      {!!p.organization ? (
                         <div>
                           <dt className="text-xs uppercase tracking-wide text-zinc-400">
                             Организация
@@ -211,10 +213,18 @@ export default async function ProductPage({ params }: Props) {
             <p className="mt-3 text-sm text-zinc-600">
               Минимум {p.minDays} дн.
             </p>
-            {/* <p className="mt-1 text-sm text-zinc-600">
-              Залог: {p.depositBYN} BYN
-            </p> */}
-            <p className="mt-1 text-sm text-zinc-600">Город: {p.city}</p>
+            {!!p.depositBYN && (
+              <p className="mt-1 text-sm text-zinc-600">
+                Залог: {p.depositBYN} BYN
+              </p>
+            )}
+            <p className="mt-1 text-m text-zinc-700">Город: {p.city}</p>
+            {p.pickupAddress && (
+              <div className="mt-2">
+                <p className="mt-1 text-sm text-zinc-600">Адресс самовывоза:</p>
+                <p className="mt-1 text-m text-zinc-700">{p.pickupAddress}</p>
+              </div>
+            )}
 
             <div className="mt-5">
               <ProductBookingForm

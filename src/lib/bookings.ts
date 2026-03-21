@@ -36,7 +36,7 @@ export async function getActiveBookingConflicts(
   return db.collection<BookingDoc>("bookings")
     .find({
       productId: new ObjectId(productId),
-      status: { $in: ["pending", "confirmed"] },
+      status: "confirmed",
       startDate: { $lte: endDate },
       endDate: { $gte: startDate },
     })

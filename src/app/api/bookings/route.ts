@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     .collection<BookingDoc>("bookings")
     .find({
       productId: new ObjectId(productId),
-      status: { $in: ["pending", "confirmed"] },
+      status: "confirmed",
     })
     .sort({ startDate: 1 })
     .toArray();
@@ -115,13 +115,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
   }
 
-  /*   if (String(product.ownerId) === String(user._id)) {
-    return NextResponse.json(
-      { error: "Нельзя бронировать собственный товар" },
-      { status: 400 },
-    );
-  } */
-
   const msPerDay = 1000 * 60 * 60 * 24;
   const diffDays =
     Math.floor((endDate.getTime() - startDate.getTime()) / msPerDay) + 1;
@@ -133,11 +126,37 @@ export async function POST(request: Request) {
     );
   }
 
-  const conflicts = await getActiveBookingConflicts(
-    productId,
-    startDate,
-    endDate,
-  );
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const existingUserBooking = await db
+    .collection<BookingDoc>("bookings")
+    .findOne({
+      productId: product._id,
+      renterId: user._id as ObjectId,
+      status: { $in: ["pending", "confirmed"] },
+      endDate: { $gte: todayStart },
+    });
+
+  if (existingUserBooking) {
+    return NextResponse.json(
+      {
+        error:
+          "У вас уже есть активная или ожидающая подтверждения заявка на этот товар",
+      },
+      { status: 409 },
+    );
+  }
+
+  const conflicts = await db
+    .collection<BookingDoc>("bookings")
+    .find({
+      productId: product._id,
+      status: "confirmed",
+      startDate: { $lte: endDate },
+      endDate: { $gte: startDate },
+    })
+    .toArray();
 
   if (conflicts.length > 0) {
     return NextResponse.json(
@@ -149,7 +168,7 @@ export async function POST(request: Request) {
   const booking = await createBooking({
     productId: product._id,
     productOwnerId: product.ownerId,
-    renterId: user._id,
+    renterId: user._id as ObjectId,
     renterEmail: session.user.email,
     phone,
     message: message || undefined,

@@ -11,17 +11,26 @@ import { getBookingsForOwner } from "@/lib/bookings";
 import { toBookingViews } from "@/lib/booking-mappers";
 import type { BookingView } from "@/types/booking";
 import { ProfileSettings } from "@/components/ProfileSettings";
+import { getAllCategories } from "@/lib/categories";
+import { CategoryDoc } from "@/types/category";
+import { toCategoryView } from "@/lib/category-mappers";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
   let myProducts: ProductDoc[] = [];
   let myBookings: BookingView[] = [];
-  let userProfile: Pick<UserType, "name" | "phone" | "showPhoneInProducts"> = {
+  let userProfile: Pick<
+    UserType,
+    "name" | "phone" | "showPhoneInProducts" | "pickupAddress"
+  > = {
     name: "",
     phone: "",
     showPhoneInProducts: false,
+    pickupAddress: "",
   };
+
+  let categories: CategoryDoc[] = [];
 
   if (session?.user?.email) {
     const client = await clientPromise;
@@ -41,7 +50,10 @@ export default async function DashboardPage() {
         name: user.name ?? "",
         phone: user.phone ?? "",
         showPhoneInProducts: Boolean(user.showPhoneInProducts),
+        pickupAddress: user.pickupAddress ?? "",
       };
+
+      categories = await getAllCategories();
     }
   }
 
@@ -62,11 +74,14 @@ export default async function DashboardPage() {
         initialName={userProfile.name}
         initialPhone={userProfile.phone}
         initialShowPhoneInProducts={userProfile.showPhoneInProducts}
+        initialPickupAddress={userProfile.pickupAddress}
       />
 
       <UserProductForm
         initialProducts={initialProducts}
         initialBookings={myBookings}
+        initialPickupAddress={userProfile.pickupAddress}
+        categories={categories.map((cat) => toCategoryView(cat))}
       />
     </div>
   );

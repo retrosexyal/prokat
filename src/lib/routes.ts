@@ -8,4 +8,5 @@ export const API_ROUTES = {
     `/api/admin/images?publicId=${encodeURIComponent(publicId)}`,
   bookings: "/api/bookings",
   me: "/api/users/me",
+  bookingById: (id: string) => `/api/bookings/${id}`,
 } as const;

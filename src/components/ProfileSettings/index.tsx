@@ -9,6 +9,7 @@ import { API_ROUTES } from "@/lib/routes";
 type Props = {
   initialName?: string;
   initialPhone?: string;
+  initialPickupAddress?: string;
   initialShowPhoneInProducts?: boolean;
 };
 
@@ -25,6 +26,7 @@ export function ProfileSettings({
   initialName = "",
   initialPhone = "",
   initialShowPhoneInProducts = false,
+  initialPickupAddress = "",
 }: Props) {
   const router = useRouter();
 
@@ -33,6 +35,7 @@ export function ProfileSettings({
   const [showPhoneInProducts, setShowPhoneInProducts] = useState(
     initialShowPhoneInProducts,
   );
+  const [pickupAddress, setPickupAddress] = useState(initialPickupAddress);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -50,6 +53,7 @@ export function ProfileSettings({
         name,
         phone,
         showPhoneInProducts,
+        pickupAddress,
       });
 
       setSuccess("Профиль обновлён");
@@ -96,6 +100,15 @@ export function ProfileSettings({
             className="mt-0.5"
           />
           <span>Показывать мой телефон в товарах и форме бронирования</span>
+        </label>
+        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+          Адрес самовывоза
+          <input
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={pickupAddress}
+            onChange={(event) => setPickupAddress(event.target.value)}
+            placeholder="Например: Могилёв, ул. Ленинская, 10"
+          />
         </label>
 
         {error ? (

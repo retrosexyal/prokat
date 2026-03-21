@@ -12,4 +12,6 @@ export type UserType = {
   phone?: string;
   phoneVerified?: boolean;
   showPhoneInProducts?: boolean;
+  productLimit?: number;
+  pickupAddress?: string;
 };

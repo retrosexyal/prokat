@@ -20,6 +20,7 @@ type Props = {
   productId: string;
   minDays?: number;
   ownerPhone?: string;
+  pickupAddress?: string;
 };
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -201,6 +202,7 @@ export function ProductBookingForm({
   productId,
   minDays = 1,
   ownerPhone,
+  pickupAddress,
 }: Props) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
@@ -424,6 +426,11 @@ export function ProductBookingForm({
             <p className="mt-1 text-xs text-zinc-500">
               Можете сразу позвонить для уточнения деталей аренды
             </p>
+          </div>
+        ) : null}
+        {pickupAddress ? (
+          <div className="text-sm text-zinc-600">
+            Адрес самовывоза: {pickupAddress}
           </div>
         ) : null}
 

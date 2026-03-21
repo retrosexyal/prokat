@@ -2,6 +2,12 @@ import type { ObjectId } from "mongodb";
 
 export type BookingStatus = "pending" | "confirmed" | "cancelled";
 
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
+  pending: "Ожидает подтверждения",
+  confirmed: "Подтверждено",
+  cancelled: "Отменено",
+};
+
 export type BookingDoc = {
   _id?: ObjectId;
   productId: ObjectId;
@@ -18,7 +24,7 @@ export type BookingDoc = {
 };
 
 export type BookingView = {
-  _id?: string;
+  _id: string;
   productId: string;
   productOwnerId: string;
   renterId: string;

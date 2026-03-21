@@ -63,6 +63,7 @@ export default async function HomePage() {
               minDays={1}
               productId={p._id?.toString() || ""}
               ownerPhone={p.ownerPhone}
+              pickupAddress={p.pickupAddress}
             />
           ))}
         </div>

@@ -82,6 +82,7 @@ export async function POST(request: Request) {
   const files = formData.getAll("files").filter((item): item is File => {
     return typeof item !== "string";
   });
+  const pickupAddress = String(formData.get("pickupAddress") ?? "").trim();
 
   if (
     !name ||
@@ -119,10 +120,11 @@ export async function POST(request: Request) {
   }
 
   const userProducts = await getProductsByOwner(String(user._id));
+  const productLimit = user.productLimit ?? FREE_PRODUCTS_LIMIT;
 
-  if (userProducts.length >= FREE_PRODUCTS_LIMIT) {
+  if (userProducts.length >= productLimit) {
     return NextResponse.json(
-      { error: `Достигнут лимит: ${FREE_PRODUCTS_LIMIT} товаров` },
+      { error: `Достигнут лимит: ${productLimit} товаров` },
       { status: 403 },
     );
   }
@@ -148,6 +150,7 @@ export async function POST(request: Request) {
     imagePublicIds,
     status: "pending",
     ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
+    pickupAddress
   });
 
   const serialized: ProductView = toProductView(product);

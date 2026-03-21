@@ -21,6 +21,7 @@ export type ProductDoc = {
   createdAt: Date;
   updatedAt: Date;
   ownerPhone?: string;
+  pickupAddress?: string;
 };
 
 export type ProductView = {
@@ -42,4 +43,5 @@ export type ProductView = {
   createdAt: string;
   updatedAt: string;
   ownerPhone?: string;
+  pickupAddress?: string;
 };

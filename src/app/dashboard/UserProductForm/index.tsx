@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
@@ -14,10 +14,14 @@ import { Modal } from "@/components/ui/Modal";
 import { DeleteProductConfirm } from "./DeleteProductConfirm";
 import { BookingView } from "@/types/booking";
 import { FileDropzone } from "@/components/ui/FileDropzone";
+import { Button } from "@/components/ui/Button";
+import { CategoryView } from "@/types/category";
 
 type Props = {
   initialProducts: ProductView[];
   initialBookings: BookingView[];
+  initialPickupAddress?: string;
+  categories: CategoryView[];
 };
 
 const MAX_IMAGES = 10;
@@ -31,11 +35,19 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export function UserProductForm({ initialProducts, initialBookings }: Props) {
+export function UserProductForm({
+  initialProducts,
+  initialBookings,
+  initialPickupAddress = "",
+  categories,
+}: Props) {
   const router = useRouter();
 
   const [products, setProducts] = useState<ProductView[]>(initialProducts);
-  const [form, setForm] = useState<ProductFormValues>(emptyProductForm);
+  const [form, setForm] = useState<ProductFormValues>({
+    ...emptyProductForm,
+    pickupAddress: initialPickupAddress,
+  });
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +56,12 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
   const [productToDelete, setProductToDelete] = useState<ProductView | null>(
     null,
   );
-  const [bookings] = useState<BookingView[]>(initialBookings);
+  const [bookings, setBookings] = useState<BookingView[]>(initialBookings);
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
 
   useEffect(() => {
     if (imageFiles.length === 0) {
@@ -103,7 +120,7 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
   }
 
   async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
+    event: SubmitEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
     setError("");
@@ -121,6 +138,7 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
       formData.append("pricePerDayBYN", String(form.pricePerDayBYN));
       formData.append("minDays", String(form.minDays));
       formData.append("city", form.city);
+      formData.append("pickupAddress", form.pickupAddress);
 
       imageFiles.forEach((file) => {
         formData.append("files", file);
@@ -137,7 +155,7 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
       );
 
       setProducts((prev) => [response.data, ...prev]);
-      setForm(emptyProductForm);
+      setForm({ ...emptyProductForm, pickupAddress: initialPickupAddress });
       setImageFiles([]);
       setPreviewUrls([]);
       router.refresh();
@@ -167,6 +185,40 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
       setError(getApiErrorMessage(error, "Ошибка удаления товара"));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleBookingStatusChange(
+    bookingId: string,
+    status: "confirmed" | "cancelled",
+  ): Promise<void> {
+    setError("");
+    setBookingActionId(bookingId);
+
+    try {
+      const response = await api.patch<BookingView>(
+        API_ROUTES.bookingById(bookingId),
+        { status },
+      );
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking._id === bookingId
+            ? {
+                ...booking,
+                ...response.data,
+                _id: booking._id,
+                product: booking.product,
+              }
+            : booking,
+        ),
+      );
+
+      router.refresh();
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Ошибка обновления бронирования"));
+    } finally {
+      setBookingActionId(null);
     }
   }
 
@@ -207,11 +259,11 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
                   }))
                 }
               >
-                <option value="instrument">Инструменты</option>
-                <option value="ladder">Лестницы</option>
-                <option value="level">Уровни</option>
-                <option value="vacuum">Пылесосы</option>
-                <option value="other">Другое</option>
+                {categories.map(({ name }) => (
+                  <option value={name} key={name}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -224,6 +276,20 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
                   setForm((prev) => ({ ...prev, city: event.target.value }))
                 }
                 required
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+              Адрес самовывоза или укажите если доставка
+              <input
+                className="rounded-md border px-2 py-1.5 text-sm"
+                value={form.pickupAddress}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    pickupAddress: event.target.value,
+                  }))
+                }
+                placeholder="Например: Могилёв, ул. Ленинская, 10"
               />
             </label>
 
@@ -449,6 +515,29 @@ export function UserProductForm({ initialProducts, initialBookings }: Props) {
                       Статус: {booking.status}
                     </div>
                   </div>
+
+                  {booking.status !== "cancelled" ? (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() =>
+                          handleBookingStatusChange(booking._id, "confirmed")
+                        }
+                        type="button"
+                      >
+                        Подтвердить
+                      </Button>
+
+                      <Button
+                        onClick={() =>
+                          handleBookingStatusChange(booking._id, "cancelled")
+                        }
+                        type="button"
+                        newClasses="text-zinc-700 bg-transparent border border-border-subtle"
+                      >
+                        Подтвердить
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -10,16 +10,18 @@ export type ProductFormValues = {
   pricePerDayBYN: number;
   minDays: number;
   city: string;
+  pickupAddress: string;
 };
 
 export const emptyProductForm: ProductFormValues = {
   name: "",
   slug: "",
-  category: "instrument",
+  category: "Другое",
   short: "",
   organization: "",
   depositBYN: 0,
   pricePerDayBYN: 0,
   minDays: 1,
   city: "Могилёв",
+  pickupAddress: "",
 };

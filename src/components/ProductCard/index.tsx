@@ -18,6 +18,7 @@ type Props = {
   available: boolean;
   ownerPhone?: string;
   isHideButton?: boolean;
+  pickupAddress?: string;
 };
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
@@ -32,6 +33,7 @@ export function ProductCard({
   available,
   ownerPhone,
   isHideButton,
+  pickupAddress
 }: Props) {
   const normalizedImages = useMemo(() => {
     const filtered = images.filter(Boolean);
@@ -112,10 +114,7 @@ export function ProductCard({
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-4">
             {!isHideButton && (
-              <Button
-                disabled={!available}
-                onClick={() => setIsBookingModalOpen(true)}
-              >
+              <Button onClick={() => setIsBookingModalOpen(true)}>
                 Арендовать
               </Button>
             )}
@@ -185,6 +184,7 @@ export function ProductCard({
           productId={productId}
           minDays={minDays}
           ownerPhone={ownerPhone}
+          pickupAddress={pickupAddress}
         />
       </Modal>
     </>
