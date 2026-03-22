@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -53,6 +54,10 @@ export default function LoginForm() {
       );
     } else if (res?.error === "VERIFY_COOLDOWN") {
       setErr("Письмо уже отправлено. Подождите минуту.");
+    } else if (res?.error === "USE_GOOGLE_LOGIN") {
+      setErr(
+        "Этот аккаунт зарегистрирован через Google. Войдите через Google.",
+      );
     } else if (res?.error) {
       setErr("Неверный email или пароль");
     } else {
@@ -63,6 +68,10 @@ export default function LoginForm() {
       router.push(callbackUrl);
       router.refresh();
     }
+  }
+
+  async function onGoogleLogin() {
+    await signIn("google", { callbackUrl });
   }
 
   return (
@@ -76,6 +85,31 @@ export default function LoginForm() {
           Войдите в аккаунт, чтобы бронировать товары
         </p>
       </div>
+
+      <Button
+        type="button"
+        onClick={onGoogleLogin}
+        newClasses="flex items-center justify-center gap-3
+    w-full h-14
+    rounded-full
+    border border-zinc-300
+    bg-white text-zinc-900
+    hover:bg-zinc-50 hover:border-zinc-400
+    transition-colors duration-200
+    shadow-sm
+    font-medium"
+      >
+        <Image
+          src="/assets/googleColor.svg"
+          alt="Google"
+          width={18}
+          height={18}
+          className="shrink-0"
+        />
+        <span className="text-base font-medium">Войти через Google</span>
+      </Button>
+
+      <div className="text-center text-sm text-zinc-400">или</div>
 
       <Input
         value={email}
@@ -93,19 +127,32 @@ export default function LoginForm() {
 
       {err ? <p className="text-sm text-red-600">{err}</p> : null}
 
-      <p className="text-sm text-zinc-600">
-        Нет аккаунта?{" "}
+      <div className="flex justify-between text-sm text-zinc-600">
         <Link
           href={
             callbackUrl !== "/"
-              ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
-              : "/register"
+              ? `/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
+              : "/forgot-password"
           }
           className="font-medium text-accent-strong hover:underline"
         >
-          Зарегистрироваться
+          Забыли пароль?
         </Link>
-      </p>
+
+        <span>
+          Нет аккаунта?{" "}
+          <Link
+            href={
+              callbackUrl !== "/"
+                ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                : "/register"
+            }
+            className="font-medium text-accent-strong hover:underline"
+          >
+            Зарегистрироваться
+          </Link>
+        </span>
+      </div>
     </form>
   );
 }
