@@ -2,6 +2,8 @@ import "./globals.css";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SessionProviderClient } from "@/components/providers/SessionProviderClient";
+import { CatalogSearch } from "@/components/CatalogSearch";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Prokatik.by — прокат товаров в Могилёве",
@@ -44,13 +46,13 @@ export default function RootLayout({
             </Link>
 
             {/* SEARCH (desktop) */}
-            <form className="hidden md:flex flex-1 max-w-md items-center gap-2">
-              <input
-                type="search"
-                placeholder="Поиск по каталогу"
-                className="w-full rounded-full border border-border-subtle bg-white px-4 py-2 text-sm outline-none focus:border-accent-strong"
-              />
-            </form>
+            <div className="hidden md:flex flex-1 min-w-0 max-w-md">
+              <Suspense
+                fallback={<div className="h-11 w-full rounded-full bg-white" />}
+              >
+                <CatalogSearch />
+              </Suspense>
+            </div>
 
             <nav className="flex items-center gap-3 text-xs sm:text-sm">
               <Link
@@ -71,11 +73,11 @@ export default function RootLayout({
           {/* SEARCH (mobile) */}
           <div className="md:hidden border-t border-border-subtle">
             <div className="max-w-6xl mx-auto px-4 py-3">
-              <input
-                type="search"
-                placeholder="Поиск по каталогу"
-                className="w-full rounded-full border border-border-subtle bg-white px-4 py-2 text-sm outline-none focus:border-accent-strong"
-              />
+              <Suspense
+                fallback={<div className="h-11 w-full rounded-full bg-white" />}
+              >
+                <CatalogSearch />
+              </Suspense>
             </div>
           </div>
         </header>

@@ -7,10 +7,13 @@ type CatalogPageProps = {
   searchParams?: Promise<{
     category?: string;
     page?: string;
+    q?: string;
   }>;
 };
 
 const PRODUCTS_PER_PAGE = 12;
+
+export const dynamic = "force-dynamic";
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const resolvedSearchParams = await searchParams;
@@ -20,6 +23,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     Number(resolvedSearchParams?.page ?? "1") || 1,
     1,
   );
+  const search = resolvedSearchParams?.q ?? "";
 
   const [
     { products, totalProducts, totalPages, currentPage: safePage },
@@ -29,6 +33,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       category: selectedCategory || undefined,
       page: currentPage,
       limit: PRODUCTS_PER_PAGE,
+      search
     }),
     getAllCategories(),
   ]);

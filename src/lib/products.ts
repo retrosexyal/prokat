@@ -20,10 +20,15 @@ function getTodayRange(): { startOfDay: Date; endOfDay: Date } {
   return { startOfDay, endOfDay };
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export type GetApprovedProductsWithAvailabilityParams = {
   category?: string;
   page?: number;
   limit?: number;
+    search?: string;
 };
 
 export type GetApprovedProductsWithAvailabilityResult = {
@@ -42,6 +47,7 @@ export async function getApprovedProductsWithAvailability(
   const { startOfDay, endOfDay } = getTodayRange();
 
   const category = params.category?.trim() ?? "";
+  const search = params.search?.trim() ?? "";
   const limit = Math.max(params.limit ?? 12, 1);
   const page = Math.max(params.page ?? 1, 1);
   const skip = (page - 1) * limit;
@@ -52,6 +58,13 @@ export async function getApprovedProductsWithAvailability(
 
   if (category) {
     matchStage.category = category;
+  }
+
+  if (search) {
+    matchStage.name = {
+      $regex: escapeRegex(search),
+      $options: "i",
+    };
   }
 
   const result = await db
