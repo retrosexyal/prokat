@@ -1,16 +1,17 @@
 import clientPromise from "./mongodb";
 import type { ProductDoc, ProductStatus } from "@/types/product";
+import type { CitySlug } from "@/lib/cities";
 import { ObjectId } from "mongodb";
 
 const COLLECTION = "products";
 
 export type ApprovedProductWithAvailability = ProductDoc & {
   isAvailableNow: boolean;
+  cityPriority?: number;
 };
 
 function getTodayRange(): { startOfDay: Date; endOfDay: Date } {
   const now = new Date();
-
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -28,7 +29,9 @@ export type GetApprovedProductsWithAvailabilityParams = {
   category?: string;
   page?: number;
   limit?: number;
-    search?: string;
+  search?: string;
+  citySlug?: CitySlug;
+  strictCityOnly?: boolean;
 };
 
 export type GetApprovedProductsWithAvailabilityResult = {
@@ -43,11 +46,13 @@ export async function getApprovedProductsWithAvailability(
 ): Promise<GetApprovedProductsWithAvailabilityResult> {
   const client = await clientPromise;
   const db = client.db();
-
   const { startOfDay, endOfDay } = getTodayRange();
 
   const category = params.category?.trim() ?? "";
   const search = params.search?.trim() ?? "";
+  const citySlug = params.citySlug?.trim() ?? "";
+  const strictCityOnly = params.strictCityOnly ?? false;
+
   const limit = Math.max(params.limit ?? 12, 1);
   const page = Math.max(params.page ?? 1, 1);
   const skip = (page - 1) * limit;
@@ -67,26 +72,40 @@ export async function getApprovedProductsWithAvailability(
     };
   }
 
+  if (strictCityOnly && citySlug) {
+    matchStage.citySlug = citySlug;
+  }
+
+  const cityPriorityStage = citySlug
+    ? {
+        $addFields: {
+          cityPriority: {
+            $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
+          },
+        },
+      }
+    : {
+        $addFields: {
+          cityPriority: 0,
+        },
+      };
+
   const result = await db
     .collection<ProductDoc>(COLLECTION)
     .aggregate([
-      {
-        $match: matchStage,
-      },
+      { $match: matchStage },
+      cityPriorityStage,
       {
         $facet: {
           items: [
             {
               $sort: {
+                cityPriority: 1,
                 createdAt: -1,
               },
             },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
-            },
+            { $skip: skip },
+            { $limit: limit },
             {
               $lookup: {
                 from: "bookings",
@@ -104,9 +123,7 @@ export async function getApprovedProductsWithAvailability(
                       },
                     },
                   },
-                  {
-                    $limit: 1,
-                  },
+                  { $limit: 1 },
                 ],
                 as: "activeBookingsToday",
               },
@@ -124,11 +141,7 @@ export async function getApprovedProductsWithAvailability(
               },
             },
           ],
-          totalCount: [
-            {
-              $count: "count",
-            },
-          ],
+          totalCount: [{ $count: "count" }],
         },
       },
     ])
@@ -148,12 +161,64 @@ export async function getApprovedProductsWithAvailability(
   };
 }
 
+export type GetApprovedProductsParams = {
+  citySlug?: CitySlug;
+  strictCityOnly?: boolean;
+  limit?: number;
+};
+
+export async function getApprovedProducts(
+  params: GetApprovedProductsParams = {},
+): Promise<ProductDoc[]> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  const citySlug = params.citySlug?.trim() ?? "";
+  const strictCityOnly = params.strictCityOnly ?? false;
+  const limit = Math.max(params.limit ?? 0, 0);
+
+  const matchStage: Record<string, unknown> = {
+    status: "approved",
+  };
+
+  if (strictCityOnly && citySlug) {
+    matchStage.citySlug = citySlug;
+  }
+
+  const cityPriorityStage = citySlug
+    ? {
+        $addFields: {
+          cityPriority: {
+            $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
+          },
+        },
+      }
+    : {
+        $addFields: {
+          cityPriority: 0,
+        },
+      };
+
+  const pipeline = [
+    { $match: matchStage },
+    cityPriorityStage,
+    { $sort: { cityPriority: 1, createdAt: -1 } },
+    { $project: { cityPriority: 0 } },
+    ...(limit > 0 ? [{ $limit: limit }] : []),
+  ];
+
+  return db
+    .collection<ProductDoc>(COLLECTION)
+    .aggregate<ProductDoc>(pipeline)
+    .toArray();
+}
+
 export async function getAllProductsForAdmin(): Promise<ProductDoc[]> {
   const client = await clientPromise;
   const db = client.db();
 
   return db
-    .collection<ProductDoc>("products")
+    .collection<ProductDoc>(COLLECTION)
     .find({})
     .sort({ createdAt: -1 })
     .toArray();
@@ -164,19 +229,8 @@ export async function getPendingProducts(): Promise<ProductDoc[]> {
   const db = client.db();
 
   return db
-    .collection<ProductDoc>("products")
-    .find({ status: "pending" })
-    .sort({ createdAt: -1 })
-    .toArray();
-}
-
-export async function getApprovedProducts(): Promise<ProductDoc[]> {
-  const client = await clientPromise;
-  const db = client.db();
-
-  return db
     .collection<ProductDoc>(COLLECTION)
-    .find({ status: "approved" })
+    .find({ status: "pending" })
     .sort({ createdAt: -1 })
     .toArray();
 }
@@ -208,7 +262,6 @@ export async function createProduct(
 ): Promise<ProductDoc> {
   const client = await clientPromise;
   const db = client.db();
-
   const now = new Date();
 
   const doc: ProductDoc = {
@@ -231,7 +284,6 @@ export async function updateProduct(
 ): Promise<ProductDoc | null> {
   const client = await clientPromise;
   const db = client.db();
-
   const _id = new ObjectId(id);
 
   const update: Partial<Omit<ProductDoc, "_id" | "createdAt">> & {
@@ -254,7 +306,6 @@ export async function updateProductStatus(
 ): Promise<ProductDoc | null> {
   const client = await clientPromise;
   const db = client.db();
-
   const _id = new ObjectId(id);
 
   const res = await db

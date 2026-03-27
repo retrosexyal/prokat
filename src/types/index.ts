@@ -1,4 +1,5 @@
 import { Condition, ObjectId } from "mongodb";
+import type { CitySlug } from "@/lib/cities";
 
 export type UserType = {
   email: string;
@@ -14,6 +15,8 @@ export type UserType = {
   showPhoneInProducts?: boolean;
   productLimit?: number;
   pickupAddress?: string;
+  city?: string;
+  citySlug?: CitySlug;
   provider?: "credentials" | "google";
   resetToken?: string;
   resetTokenExpires?: Date;

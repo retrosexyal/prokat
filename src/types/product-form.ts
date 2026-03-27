@@ -1,4 +1,5 @@
 import type { ProductDoc } from "@/types/product";
+import type { CitySlug } from "@/lib/cities";
 
 export type ProductFormValues = {
   name: string;
@@ -10,6 +11,7 @@ export type ProductFormValues = {
   pricePerDayBYN: number;
   minDays: number;
   city: string;
+  citySlug: CitySlug;
   pickupAddress: string;
 };
 
@@ -23,5 +25,6 @@ export const emptyProductForm: ProductFormValues = {
   pricePerDayBYN: 0,
   minDays: 1,
   city: "Могилёв",
+  citySlug: "mogilev",
   pickupAddress: "",
 };

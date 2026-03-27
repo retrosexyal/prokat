@@ -9,6 +9,7 @@ import type { ProductDoc, ProductView } from "@/types/product";
 import type { UserType } from "@/types";
 import { toProductView } from "@/lib/product-mappers";
 import { generateUniqueSlug } from "@/lib/slug";
+import { resolveCity } from "@/lib/cities";
 
 const FREE_PRODUCTS_LIMIT = 3;
 const MAX_IMAGES = 10;
@@ -78,7 +79,12 @@ export async function POST(request: Request) {
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
   const minDays = Number(formData.get("minDays") ?? 1);
-  const city = String(formData.get("city") ?? "").trim();
+  const rawCity = String(formData.get("city") ?? "").trim();
+  const rawCitySlug = String(formData.get("citySlug") ?? "").trim();
+
+  const resolvedCity = resolveCity(rawCitySlug || rawCity);
+  const city = resolvedCity.name;
+  const citySlug = resolvedCity.slug;
   const files = formData.getAll("files").filter((item): item is File => {
     return typeof item !== "string";
   });
@@ -88,7 +94,6 @@ export async function POST(request: Request) {
     !name ||
     !category ||
     !short ||
-    !city ||
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
     Number.isNaN(minDays)
@@ -146,11 +151,12 @@ export async function POST(request: Request) {
     pricePerDayBYN,
     minDays,
     city,
+    citySlug,
     images,
     imagePublicIds,
     status: "pending",
     ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
-    pickupAddress
+    pickupAddress,
   });
 
   const serialized: ProductView = toProductView(product);

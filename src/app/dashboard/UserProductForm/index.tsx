@@ -16,6 +16,7 @@ import { BookingView } from "@/types/booking";
 import { FileDropzone } from "@/components/ui/FileDropzone";
 import { Button } from "@/components/ui/Button";
 import { CategoryView } from "@/types/category";
+import { CITIES, getRealCityBySlug } from "@/lib/cities";
 
 type Props = {
   initialProducts: ProductView[];
@@ -139,6 +140,7 @@ export function UserProductForm({
       formData.append("minDays", String(form.minDays));
       formData.append("city", form.city);
       formData.append("pickupAddress", form.pickupAddress);
+      formData.append("citySlug", form.citySlug);
 
       imageFiles.forEach((file) => {
         formData.append("files", file);
@@ -269,14 +271,27 @@ export function UserProductForm({
 
             <label className="flex flex-col gap-1 text-xs sm:text-sm">
               Город
-              <input
+              <select
                 className="rounded-md border px-2 py-1.5 text-sm"
-                value={form.city}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, city: event.target.value }))
-                }
+                value={form.citySlug}
+                onChange={(event) => {
+                  const city = getRealCityBySlug(event.target.value);
+                  if (!city) return;
+
+                  setForm((prev) => ({
+                    ...prev,
+                    citySlug: city.slug,
+                    city: city.name,
+                  }));
+                }}
                 required
-              />
+              >
+                {CITIES.filter((city) => city.slug !== "all").map((city) => (
+                  <option value={city.slug} key={city.slug}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
               Адрес самовывоза или укажите если доставка

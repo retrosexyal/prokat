@@ -8,11 +8,34 @@ import {
   useTransition,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { isRegionSlug } from "@/lib/cities";
 
 type CatalogSearchProps = {
   placeholder?: string;
   className?: string;
 };
+
+function getSearchBasePath(pathname: string): string {
+  if (pathname === "/" || pathname === "/all") {
+    return "/all";
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+
+  if (segments.length >= 1 && isRegionSlug(segments[0])) {
+    if (segments.length >= 2) {
+      return `/${segments[0]}/${segments[1]}`;
+    }
+
+    return `/${segments[0]}`;
+  }
+
+  if (pathname.startsWith("/catalog")) {
+    return "/all";
+  }
+
+  return "/all";
+}
 
 export function CatalogSearch({
   placeholder = "Поиск по каталогу",
@@ -64,15 +87,12 @@ export function CatalogSearch({
           params.delete("q");
         }
 
+        const basePath = getSearchBasePath(pathname);
         const target = params.toString()
-          ? `/catalog?${params.toString()}`
-          : "/catalog";
+          ? `${basePath}?${params.toString()}`
+          : basePath;
 
-        if (pathname === "/catalog") {
-          router.replace(target);
-        } else if (trimmed) {
-          router.push(target);
-        }
+        router.replace(target);
 
         lastAppliedRef.current = trimmed;
         isEditingRef.current = false;
@@ -90,14 +110,11 @@ export function CatalogSearch({
     params.delete("q");
     params.delete("page");
 
-    const nextUrl = params.toString()
-      ? `${pathname}?${params.toString()}`
-      : pathname;
+    const basePath = getSearchBasePath(pathname);
+    const nextUrl = params.toString() ? `${basePath}?${params.toString()}` : basePath;
 
     startTransition(() => {
-      if (pathname === "/catalog") {
-        router.replace(nextUrl);
-      }
+      router.replace(nextUrl);
     });
   }
 

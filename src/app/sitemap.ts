@@ -1,13 +1,42 @@
 import type { MetadataRoute } from "next";
-import { products } from "@/data/products";
+import { CITIES } from "@/lib/cities";
+import { getAllCategories } from "@/lib/categories";
+import { getApprovedProducts } from "@/lib/products";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://Prokatik.by";
-  return [
-    { url: `${base}/`, lastModified: new Date() },
-    { url: `${base}/catalog`, lastModified: new Date() },
-    { url: `${base}/terms`, lastModified: new Date() },
-    { url: `${base}/contacts`, lastModified: new Date() },
-    ...products.map(p => ({ url: `${base}/product/${p.slug}`, lastModified: new Date() })),
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = "https://prokatik.by";
+  const now = new Date();
+
+  const [categories, products] = await Promise.all([
+    getAllCategories(),
+    getApprovedProducts(),
+  ]);
+
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: `${base}/`, lastModified: now },
+    { url: `${base}/all`, lastModified: now },
+    { url: `${base}/terms`, lastModified: now },
+    { url: `${base}/rules`, lastModified: now },
+    { url: `${base}/agreement`, lastModified: now },
+    { url: `${base}/dashboard`, lastModified: now },
   ];
+
+  const regionPages: MetadataRoute.Sitemap = CITIES.map((city) => ({
+    url: `${base}/${city.slug}`,
+    lastModified: now,
+  }));
+
+  const categoryPages: MetadataRoute.Sitemap = CITIES.flatMap((city) =>
+    categories.map((category) => ({
+      url: `${base}/${city.slug}/${category.slug}`,
+      lastModified: now,
+    })),
+  );
+
+  const productPages: MetadataRoute.Sitemap = products.map((product) => ({
+    url: `${base}/product/${product.slug}`,
+    lastModified: product.updatedAt ?? now,
+  }));
+
+  return [...staticPages, ...regionPages, ...categoryPages, ...productPages];
 }

@@ -1,33 +1,30 @@
 import Link from "next/link";
 import { getApprovedProducts } from "@/lib/products";
 import { ProductCard } from "@/components/ProductCard";
+import { HomeCatalogLink } from "@/components/HomeCatalogLink";
 
 export default async function HomePage() {
-  const products = await getApprovedProducts();
+  const products = await getApprovedProducts({ limit: 6 });
 
   return (
     <>
-      {/* HERO */}
-      <section className="mb-10 sm:mb-12 rounded-xl bg-gradient-to-r from-accent/30 via-accent/10 to-transparent px-4 py-6 sm:px-8 sm:py-8 border border-border-subtle">
+      <section className="mb-10 rounded-xl border border-border-subtle bg-gradient-to-r from-accent/30 via-accent/10 to-transparent px-4 py-6 sm:mb-12 sm:px-8 sm:py-8">
         <div className="max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-zinc-900">
+          <h1 className="text-3xl font-bold leading-tight text-zinc-900 sm:text-4xl md:text-5xl">
             Аренда товаров
-            <br />в Могилёве
+            <br />
+            по Беларуси
           </h1>
 
-          <p className="mt-4 sm:mt-5 text-sm sm:text-base text-zinc-600 max-w-xl">
-            Площадка объявлений для аренды товаров в Могилёве. Здесь можно найти
-            и разместить предложения для дома, ремонта, отдыха, мероприятий,
-            техники и других повседневных задач.
+          <p className="mt-4 max-w-xl text-sm text-zinc-600 sm:mt-5 sm:text-base">
+            Платформа объявлений для аренды товаров по городам Беларуси. Здесь
+            можно найти и разместить предложения для дома, ремонта, отдыха,
+            мероприятий, техники и других повседневных задач.
           </p>
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/catalog"
-              className="inline-flex items-center justify-center rounded-full bg-accent-strong px-6 py-3 text-sm font-semibold text-black hover:bg-accent"
-            >
-              Открыть каталог
-            </Link>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <HomeCatalogLink />
+
             <Link
               href="/dashboard"
               className="inline-flex items-center justify-center rounded-full border border-border-subtle bg-white px-6 py-3 text-sm text-zinc-700 hover:bg-zinc-50"
@@ -38,22 +35,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* POPULAR */}
       <section>
-        <div className="flex items-baseline justify-between mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900">
-            Популярные товары
+        <div className="mb-4 flex items-baseline justify-between sm:mb-6">
+          <h2 className="text-xl font-semibold text-zinc-900 sm:text-2xl">
+            Новые товары
           </h2>
           <Link
-            href="/catalog"
-            className="hidden sm:inline text-xs font-medium text-accent-strong hover:text-accent"
+            href="/all"
+            className="hidden text-xs font-medium text-accent-strong hover:text-accent sm:inline"
           >
             Смотреть весь каталог
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 items-stretch">
-          {products.slice(0, 6).map((p) => (
+        <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          {products.map((p) => (
             <ProductCard
               key={p._id?.toString() ?? p.slug}
               name={p.name}
@@ -61,36 +57,11 @@ export default async function HomePage() {
               images={p.images}
               pricePerDay={p.pricePerDayBYN}
               available
-              minDays={1}
+              minDays={p.minDays ?? 1}
               productId={p._id?.toString() || ""}
               ownerPhone={p.ownerPhone}
               pickupAddress={p.pickupAddress}
             />
-          ))}
-        </div>
-      </section>
-
-      {/* HOW */}
-      <section className="mt-14 sm:mt-16">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-zinc-900">
-          Как это работает
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
-          {[
-            "Выбираете товар и дату аренды",
-            "Бронируем и подтверждаем условия",
-            "Получаем товар",
-            "Возвращаете вовремя и без штрафов",
-          ].map((s, i) => (
-            <div
-              key={i}
-              className="bg-white border border-border-subtle rounded-lg px-3 py-3 sm:px-4 sm:py-4"
-            >
-              <div className="text-accent-strong font-semibold mb-1 sm:mb-2">
-                {i + 1}
-              </div>
-              <p className="text-zinc-700">{s}</p>
-            </div>
           ))}
         </div>
       </section>

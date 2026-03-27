@@ -14,11 +14,14 @@ export function toProductView(product: ProductDoc): ProductView {
     pricePerDayBYN: product.pricePerDayBYN,
     minDays: product.minDays,
     city: product.city,
+    citySlug: product.citySlug,
     images: product.images,
     imagePublicIds: product.imagePublicIds,
     status: product.status,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
+    ownerPhone: product.ownerPhone,
+    pickupAddress: product.pickupAddress,
   };
 }
 

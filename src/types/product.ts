@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { CitySlug } from "@/lib/cities";
 
 export type ProductStatus = "pending" | "approved" | "rejected";
 
@@ -15,6 +16,7 @@ export type ProductDoc = {
   pricePerDayBYN: number;
   minDays: number;
   city: string;
+  citySlug: CitySlug;
   images: string[];
   imagePublicIds?: string[];
   status: ProductStatus;
@@ -37,6 +39,7 @@ export type ProductView = {
   pricePerDayBYN: number;
   minDays: number;
   city: string;
+  citySlug: CitySlug;
   images: string[];
   imagePublicIds?: string[];
   status: ProductStatus;
