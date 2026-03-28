@@ -7,6 +7,7 @@ import { getCityBySlug, isRegionSlug } from "@/lib/cities";
 import { getProductPath } from "@/lib/routes";
 import { ProductGallery } from "@/components/ProductGallery";
 import { ProductBookingForm } from "@/components/ProductBookingForm";
+import { getApprovedProducts } from "@/lib/products";
 
 type Props = {
   params: Promise<{
@@ -15,6 +16,16 @@ type Props = {
     slug: string;
   }>;
 };
+
+export async function generateStaticParams() {
+  const products = await getApprovedProducts();
+
+  return products.map((product) => ({
+    region: product.citySlug,
+    category: product.category,
+    slug: product.slug,
+  }));
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -181,7 +192,9 @@ export default async function ProductPage({ params }: Props) {
                         <dt className="text-xs uppercase tracking-wide text-zinc-400">
                           Категория
                         </dt>
-                        <dd className="mt-1 text-zinc-800">{categoryDoc.name}</dd>
+                        <dd className="mt-1 text-zinc-800">
+                          {categoryDoc.name}
+                        </dd>
                       </div>
 
                       <div>

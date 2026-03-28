@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../api/auth/[...nextauth]/route";
+import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { LogoutButton } from "@/components/LogoutButton";
 import clientPromise from "@/lib/mongodb";
 import { getProductsByOwner } from "@/lib/products";

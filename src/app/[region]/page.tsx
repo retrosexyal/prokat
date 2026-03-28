@@ -21,6 +21,18 @@ type Props = {
 
 const PRODUCTS_PER_PAGE = 12;
 
+export function generateStaticParams() {
+  return [
+    { region: "all" },
+    { region: "mogilev" },
+    { region: "minsk" },
+    { region: "gomel" },
+    { region: "vitebsk" },
+    { region: "grodno" },
+    { region: "brest" },
+  ];
+}
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

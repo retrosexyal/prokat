@@ -19,6 +19,25 @@ type Props = {
   }>;
 };
 
+export async function generateStaticParams() {
+  const categories = await getAllCategories();
+
+  return [
+    "all",
+    "mogilev",
+    "minsk",
+    "gomel",
+    "vitebsk",
+    "grodno",
+    "brest",
+  ].flatMap((region) =>
+    categories.map((category) => ({
+      region,
+      category: category.slug,
+    })),
+  );
+}
+
 const PRODUCTS_PER_PAGE = 12;
 
 export const dynamic = "force-dynamic";

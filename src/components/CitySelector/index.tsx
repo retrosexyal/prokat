@@ -37,36 +37,38 @@ function getRegionFromPathname(pathname: string): RegionSlug | null {
   return null;
 }
 
-function getRegionBasePath(pathname: string): string {
+function buildTargetPath(pathname: string, region: RegionSlug): string {
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) {
-    return "/";
-  }
-
-  if (isKnownRegion(segments[0])) {
-    if (segments.length >= 2) {
-      return `/${segments[1]}`;
-    }
-
-    return "/";
-  }
-
-  if (segments[0] === "catalog") {
-    return "/";
-  }
-
-  return pathname;
-}
-
-function buildTargetPath(pathname: string, region: RegionSlug): string {
-  const basePath = getRegionBasePath(pathname);
-
-  if (basePath === "/") {
     return region === "all" ? "/all" : `/${region}`;
   }
 
-  return region === "all" ? `/all${basePath}` : `/${region}${basePath}`;
+  if (isKnownRegion(segments[0])) {
+    const rest = segments.slice(1);
+
+    if (rest.length === 0) {
+      return region === "all" ? "/all" : `/${region}`;
+    }
+
+    return region === "all"
+      ? `/all/${rest.join("/")}`
+      : `/${region}/${rest.join("/")}`;
+  }
+
+  if (segments[0] === "catalog") {
+    const rest = segments.slice(1);
+
+    if (rest.length === 0) {
+      return region === "all" ? "/all" : `/${region}`;
+    }
+
+    return region === "all"
+      ? `/all/${rest.join("/")}`
+      : `/${region}/${rest.join("/")}`;
+  }
+
+  return pathname;
 }
 
 type CitySelectorProps = {
@@ -110,7 +112,9 @@ export function CitySelector({ initialRegion }: CitySelectorProps) {
 
     window.localStorage.setItem(STORAGE_KEY, nextRegion);
 
-    if (nextRegion !== "all") {
+    if (nextRegion === "all") {
+      document.cookie = `${COOKIE_KEY}=; path=/; max-age=0; samesite=lax`;
+    } else {
       document.cookie = `${COOKIE_KEY}=${nextRegion}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
     }
 

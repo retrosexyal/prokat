@@ -30,9 +30,6 @@ function getSearchBasePath(pathname: string): string {
     return `/${segments[0]}`;
   }
 
-  if (pathname.startsWith("/catalog")) {
-    return "/all";
-  }
 
   return "/all";
 }

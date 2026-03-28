@@ -1,27 +1,24 @@
 import Link from "next/link";
 import { Suspense } from "react";
-/* import { headers } from "next/headers"; */
 import { CatalogSearch } from "@/components/CatalogSearch";
 import { CitySelector } from "@/components/CitySelector";
-/* import { HeaderCurrentCity } from "@/components/HeaderCurrentCity"; */
 import { getRequestCity } from "@/lib/request-city";
+import {  getRealCityBySlug, isRegionSlug, type RegionSlug } from "@/lib/cities";
 
-/* function normalizePathname(pathname: string | null): string {
-  if (!pathname) {
-    return "/";
-  }
+type LayoutHeaderProps = {
+  forcedRegion?: string;
+};
 
-  const clean = pathname.trim();
-  return clean ? clean : "/";
-} */
-
-export async function LayoutHeader() {
-  /*   const headerStore = await headers(); */
+export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
   const requestCity = await getRequestCity();
 
-  /*   const pathname =
-    normalizePathname(headerStore.get("x-pathname")) ||
-    normalizePathname(headerStore.get("x-invoke-path")); */
+  const initialRegion: RegionSlug =
+    forcedRegion && isRegionSlug(forcedRegion) ? forcedRegion : requestCity.slug;
+
+  const currentCity =
+    forcedRegion && forcedRegion !== "all"
+      ? getRealCityBySlug(forcedRegion)
+      : requestCity;
 
   return (
     <header className="border-b border-border-subtle bg-header">
@@ -48,8 +45,17 @@ export async function LayoutHeader() {
         </div>
 
         <nav className="flex items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-          {/* <HeaderCurrentCity pathname={pathname} /> */}
-          <CitySelector initialRegion={requestCity.slug} />
+          {currentCity ? (
+            <Link
+              href={`/${currentCity.slug}`}
+              className="hidden rounded-full border border-border-subtle bg-white px-3 py-2 text-xs text-zinc-700 transition hover:bg-zinc-50 sm:inline-flex sm:items-center sm:text-sm"
+              title={`Открыть каталог в ${currentCity.nameIn}`}
+            >
+              Сейчас: {currentCity.name}
+            </Link>
+          ) : null}
+
+          <CitySelector initialRegion={initialRegion} />
 
           <Link
             href="/all"
