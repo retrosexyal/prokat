@@ -61,6 +61,8 @@ export default async function HomePage() {
               productId={p._id?.toString() || ""}
               ownerPhone={p.ownerPhone}
               pickupAddress={p.pickupAddress}
+              category={p.category}
+              citySlug={p.citySlug}
             />
           ))}
         </div>

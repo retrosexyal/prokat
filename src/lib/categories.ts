@@ -14,6 +14,15 @@ export async function getAllCategories(): Promise<CategoryDoc[]> {
     .toArray();
 }
 
+export async function getCategoryBySlug(
+  slug: string,
+): Promise<CategoryDoc | null> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  return db.collection<CategoryDoc>("categories").findOne({ slug });
+}
+
 export async function createCategory(
   db: Db,
   name: string,

@@ -470,6 +470,8 @@ export function UserProductForm({
                     <ProductCard
                       name={product.name}
                       slug={product.slug}
+                      category={product.category}
+                      citySlug={product.citySlug}
                       images={images}
                       pricePerDay={product.pricePerDayBYN}
                       available={product.status === "approved"}

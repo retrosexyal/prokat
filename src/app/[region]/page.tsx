@@ -173,6 +173,8 @@ export default async function RegionPage({ params, searchParams }: Props) {
                   key={product._id?.toString() ?? product.slug}
                   name={product.name}
                   slug={product.slug}
+                  category={product.category}
+                  citySlug={product.citySlug}
                   images={product.images}
                   pricePerDay={product.pricePerDayBYN}
                   available={product.isAvailableNow}

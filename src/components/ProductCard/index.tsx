@@ -7,11 +7,15 @@ import { PriceBlock } from "../PriceBlock";
 import { Modal } from "../ui/Modal";
 import { ProductBookingForm } from "../ProductBookingForm";
 import { Button } from "../ui/Button";
+import type { CitySlug } from "@/lib/cities";
+import { getProductPath } from "@/lib/routes";
 
 type Props = {
   productId: string;
   name: string;
   slug: string;
+  category: string;
+  citySlug: CitySlug;
   images?: string[];
   pricePerDay: number;
   minDays: number;
@@ -27,13 +31,15 @@ export function ProductCard({
   productId,
   name,
   slug,
+  category,
+  citySlug,
   images = [],
   pricePerDay,
   minDays,
   available,
   ownerPhone,
   isHideButton,
-  pickupAddress
+  pickupAddress,
 }: Props) {
   const normalizedImages = useMemo(() => {
     const filtered = images.filter(Boolean);
@@ -52,6 +58,7 @@ export function ProductCard({
 
   const selectedImage = normalizedImages[selectedIndex] ?? FALLBACK_IMAGE;
   const showThumbnails = normalizedImages.length > 1;
+  const productHref = getProductPath({ slug, category, citySlug });
 
   return (
     <>
@@ -120,7 +127,7 @@ export function ProductCard({
             )}
 
             <Link
-              href={`/product/${slug}`}
+              href={productHref}
               className="text-sm text-gray-500 hover:text-black"
             >
               Подробнее

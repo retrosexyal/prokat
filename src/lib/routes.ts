@@ -1,3 +1,5 @@
+import type { CitySlug } from "@/lib/cities";
+
 export const API_ROUTES = {
   products: "/api/products",
   productById: (id: string) => `/api/products/${id}`,
@@ -10,3 +12,17 @@ export const API_ROUTES = {
   me: "/api/users/me",
   bookingById: (id: string) => `/api/bookings/${id}`,
 } as const;
+
+type ProductPathInput = {
+  slug: string;
+  category: string;
+  citySlug: CitySlug;
+};
+
+export function getProductPath({
+  slug,
+  category,
+  citySlug,
+}: ProductPathInput): string {
+  return `/${citySlug}/${category}/${slug}`;
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { slugify } from "@/lib/slug";
 
 type CategoryView = {
   _id?: string;
@@ -18,9 +19,15 @@ export function CategoriesManager() {
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
+  const slugPreview = useMemo(() => {
+    const trimmed = name.trim();
+    return trimmed ? slugify(trimmed) : "";
+  }, [name]);
+
   async function loadCategories() {
     try {
       setLoadingCategories(true);
+      setError("");
 
       const response = await fetch("/api/categories", {
         method: "GET",
@@ -96,22 +103,30 @@ export function CategoriesManager() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Название категории"
-          disabled={loading}
-          className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-zinc-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Создание..." : "Добавить"}
-        </button>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Название категории"
+            disabled={loading}
+            className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-zinc-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Создание..." : "Добавить"}
+          </button>
+        </div>
+
+        {slugPreview ? (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+            slug: <span className="font-medium text-zinc-900">{slugPreview}</span>
+          </div>
+        ) : null}
       </form>
 
       {error ? (
