@@ -9,12 +9,24 @@ import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
 
+const GUEST_BOOKING_LIMIT_PER_HOUR = 3;
+
 function normalizeDateStart(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
 function normalizeDateEnd(value: string): Date {
   return new Date(`${value}T23:59:59.999Z`);
+}
+
+function getClientIpAddress(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() ?? "";
+  }
+
+  return request.headers.get("x-real-ip")?.trim() ?? "";
 }
 
 export async function GET(request: Request) {
@@ -52,10 +64,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const body = (await request.json()) as {
     productId?: string;
@@ -98,14 +106,6 @@ export async function POST(request: Request) {
   const client = await clientPromise;
   const db = client.db();
 
-  const user = await db.collection<UserType>("users").findOne({
-    email: session.user.email,
-  });
-
-  if (!user?._id) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
   const product = await db.collection<ProductDoc>("products").findOne({
     _id: new ObjectId(productId),
     status: "approved",
@@ -129,23 +129,39 @@ export async function POST(request: Request) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const existingUserBooking = await db
-    .collection<BookingDoc>("bookings")
-    .findOne({
-      productId: product._id,
-      renterId: user._id as ObjectId,
-      status: { $in: ["pending", "confirmed"] },
-      endDate: { $gte: todayStart },
+  let renterId: ObjectId | undefined;
+  let renterEmail: string | undefined;
+
+  if (session?.user?.email) {
+    const user = await db.collection<UserType>("users").findOne({
+      email: session.user.email,
     });
 
-  if (existingUserBooking) {
-    return NextResponse.json(
-      {
-        error:
-          "У вас уже есть активная или ожидающая подтверждения заявка на этот товар",
-      },
-      { status: 409 },
-    );
+    if (!user?._id) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    renterId = user._id as ObjectId;
+    renterEmail = session.user.email;
+
+    const existingUserBooking = await db
+      .collection<BookingDoc>("bookings")
+      .findOne({
+        productId: product._id,
+        renterId: user._id as ObjectId,
+        status: { $in: ["pending", "confirmed"] },
+        endDate: { $gte: todayStart },
+      });
+
+    if (existingUserBooking) {
+      return NextResponse.json(
+        {
+          error:
+            "У вас уже есть активная или ожидающая подтверждения заявка на этот товар",
+        },
+        { status: 409 },
+      );
+    }
   }
 
   const conflicts = await db
@@ -165,11 +181,64 @@ export async function POST(request: Request) {
     );
   }
 
+  const guestIpAddress = !session?.user?.email
+    ? getClientIpAddress(request)
+    : undefined;
+
+  if (!session?.user?.email) {
+    if (!guestIpAddress) {
+      return NextResponse.json(
+        { error: "Не удалось определить IP адрес пользователя" },
+        { status: 400 },
+      );
+    }
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    const recentBookingsCount = await db
+      .collection<BookingDoc>("bookings")
+      .countDocuments({
+        guestIpAddress,
+        createdAt: { $gte: oneHourAgo },
+        status: { $in: ["pending", "confirmed"] },
+      });
+
+    if (recentBookingsCount >= GUEST_BOOKING_LIMIT_PER_HOUR) {
+      return NextResponse.json(
+        {
+          error:
+            "С этого IP адреса уже создано максимальное количество бронирований за последний час. Попробуйте позже.",
+        },
+        { status: 429 },
+      );
+    }
+
+    const existingGuestBooking = await db
+      .collection<BookingDoc>("bookings")
+      .findOne({
+        productId: product._id,
+        guestIpAddress,
+        status: { $in: ["pending", "confirmed"] },
+        endDate: { $gte: todayStart },
+      });
+
+    if (existingGuestBooking) {
+      return NextResponse.json(
+        {
+          error:
+            "С этого IP уже есть активная или ожидающая подтверждения заявка на этот товар",
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const booking = await createBooking({
     productId: product._id,
     productOwnerId: product.ownerId,
-    renterId: user._id as ObjectId,
-    renterEmail: session.user.email,
+    renterId,
+    renterEmail,
+    guestIpAddress,
     phone,
     message: message || undefined,
     startDate,

@@ -511,8 +511,14 @@ export function UserProductForm({
                       </div>
 
                       <div className="text-sm text-zinc-600">
-                        Email: {booking.renterEmail}
+                        Контакт:{" "}
+                        {booking.renterEmail ?? "Гость без регистрации"}
                       </div>
+                      {booking.guestIpAddress ? (
+                        <div className="text-sm text-zinc-600">
+                          IP: {booking.guestIpAddress}
+                        </div>
+                      ) : null}
 
                       <div className="text-sm text-zinc-600">
                         Даты: {booking.startDate.slice(0, 10)} —{" "}
@@ -533,15 +539,16 @@ export function UserProductForm({
 
                   {booking.status !== "cancelled" ? (
                     <div className="flex gap-2">
-                      <Button
-                        onClick={() =>
-                          handleBookingStatusChange(booking._id, "confirmed")
-                        }
-                        type="button"
-                      >
-                        Подтвердить
-                      </Button>
-
+                      {booking.status !== "confirmed" && (
+                        <Button
+                          onClick={() =>
+                            handleBookingStatusChange(booking._id, "confirmed")
+                          }
+                          type="button"
+                        >
+                          Подтвердить
+                        </Button>
+                      )}
                       <Button
                         onClick={() =>
                           handleBookingStatusChange(booking._id, "cancelled")
@@ -549,7 +556,7 @@ export function UserProductForm({
                         type="button"
                         newClasses="text-zinc-700 bg-transparent border border-border-subtle"
                       >
-                        Подтвердить
+                        Отменить
                       </Button>
                     </div>
                   ) : null}

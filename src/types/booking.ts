@@ -12,8 +12,9 @@ export type BookingDoc = {
   _id?: ObjectId;
   productId: ObjectId;
   productOwnerId: ObjectId;
-  renterId: ObjectId;
-  renterEmail: string;
+  renterId?: ObjectId;
+  renterEmail?: string;
+  guestIpAddress?: string;
   phone: string;
   message?: string;
   startDate: Date;
@@ -27,8 +28,9 @@ export type BookingView = {
   _id: string;
   productId: string;
   productOwnerId: string;
-  renterId: string;
-  renterEmail: string;
+  renterId?: string;
+  renterEmail?: string;
+  guestIpAddress?: string;
   phone: string;
   message?: string;
   startDate: string;

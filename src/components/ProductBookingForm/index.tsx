@@ -14,8 +14,6 @@ import { ru } from "react-day-picker/locale";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import { useIsMobile } from "@/hook";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 type BusyRange = {
   _id?: string;
@@ -223,31 +221,7 @@ export function ProductBookingForm({
   const [error, setError] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const { status } = useSession();
-
   const bookingDraftStorageKey = `booking-draft:${productId}`;
-
-  function saveBookingDraft(): void {
-    if (typeof window === "undefined") return;
-
-    sessionStorage.setItem(
-      bookingDraftStorageKey,
-      JSON.stringify({
-        phone,
-        message,
-        startDate,
-        endDate,
-      }),
-    );
-  }
-
-  function getCurrentUrl(): string {
-    const query = searchParams?.toString();
-    return query ? `${pathname}?${query}` : pathname;
-  }
 
   const isMobile = useIsMobile();
 
@@ -402,15 +376,6 @@ export function ProductBookingForm({
       return;
     }
 
-    if (status !== "authenticated") {
-      saveBookingDraft();
-
-      const callbackUrl = encodeURIComponent(getCurrentUrl());
-      router.push(`/login?callbackUrl=${callbackUrl}`);
-      setLoading(false);
-      return;
-    }
-
     try {
       await api.post(API_ROUTES.bookings, {
         productId,
@@ -435,13 +400,7 @@ export function ProductBookingForm({
       );
       setBusyRanges(response.data);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        saveBookingDraft();
-        const callbackUrl = encodeURIComponent(getCurrentUrl());
-        router.push(`/login?callbackUrl=${callbackUrl}`);
-      } else {
-        setError(getApiErrorMessage(error, "Ошибка бронирования"));
-      }
+      setError(getApiErrorMessage(error, "Ошибка бронирования"));
     } finally {
       setLoading(false);
     }
@@ -620,13 +579,15 @@ export function ProductBookingForm({
           <div className="text-sm text-emerald-600">{success}</div>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={loading || loadingBusyDates}
-          className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
-        >
-          {loading ? "Отправка..." : "Забронировать"}
-        </button>
+        {!success && (
+          <button
+            type="submit"
+            disabled={loading || loadingBusyDates}
+            className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
+          >
+            {loading ? "Отправка..." : "Забронировать"}
+          </button>
+        )}
       </form>
 
       <BookingCalendarModal
