@@ -79,6 +79,7 @@ export async function POST(request: Request) {
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
   const minDays = Number(formData.get("minDays") ?? 1);
+  const quantity = Number(formData.get("quantity") ?? 1);
   const rawCity = String(formData.get("city") ?? "").trim();
   const rawCitySlug = String(formData.get("citySlug") ?? "").trim();
 
@@ -96,10 +97,18 @@ export async function POST(request: Request) {
     !short ||
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
-    Number.isNaN(minDays)
+    Number.isNaN(minDays) ||
+    Number.isNaN(quantity)
   ) {
     return NextResponse.json(
       { error: "Заполните все обязательные поля" },
+      { status: 400 },
+    );
+  }
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return NextResponse.json(
+      { error: "Количество товара должно быть не меньше 1" },
       { status: 400 },
     );
   }
@@ -150,6 +159,7 @@ export async function POST(request: Request) {
     depositBYN,
     pricePerDayBYN,
     minDays,
+    quantity,
     city,
     citySlug,
     images,

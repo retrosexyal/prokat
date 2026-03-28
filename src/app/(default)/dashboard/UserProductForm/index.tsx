@@ -141,6 +141,7 @@ export function UserProductForm({
       formData.append("city", form.city);
       formData.append("pickupAddress", form.pickupAddress);
       formData.append("citySlug", form.citySlug);
+      formData.append("quantity", String(form.quantity));
 
       imageFiles.forEach((file) => {
         formData.append("files", file);
@@ -375,15 +376,27 @@ export function UserProductForm({
               />
             </label>
 
+            <label className="flex flex-col gap-1 text-xs sm:text-sm">
+              Количество товара
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="rounded-md border px-2 py-1.5 text-sm"
+                value={form.quantity}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    quantity: Number(event.target.value),
+                  }))
+                }
+                required
+              />
+            </label>
+
             <div className="flex flex-col gap-2 text-xs sm:text-sm sm:col-span-2">
               <span>Изображения (до {MAX_IMAGES})</span>
 
-              {/* <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={handleFileChange}
-              /> */}
               <FileDropzone
                 accept="image/jpeg,image/png,image/webp"
                 multiple
@@ -481,7 +494,7 @@ export function UserProductForm({
                     />
 
                     <div className="mt-2 px-1 text-sm text-zinc-500">
-                      Статус: {product.status}
+                      Статус: {product.status} · Кол-во: {product.quantity ?? 1}
                     </div>
                   </div>
                 );

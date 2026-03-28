@@ -25,6 +25,7 @@ type BusyRange = {
 type Props = {
   productId: string;
   minDays?: number;
+  totalQuantity?: number;
   ownerPhone?: string;
   pickupAddress?: string;
 };
@@ -204,17 +205,24 @@ function BookingCalendarModal({
   );
 }
 
+type BusyRangesResponse = {
+  totalQuantity: number;
+  bookings: BusyRange[];
+};
+
 export function ProductBookingForm({
   productId,
   minDays = 1,
   ownerPhone,
   pickupAddress,
+  totalQuantity = 1,
 }: Props) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [busyRanges, setBusyRanges] = useState<BusyRange[]>([]);
+  const [resolvedQuantity, setResolvedQuantity] = useState(totalQuantity);
   const [loading, setLoading] = useState(false);
   const [loadingBusyDates, setLoadingBusyDates] = useState(true);
   const [success, setSuccess] = useState("");
@@ -232,16 +240,20 @@ export function ProductBookingForm({
       setLoadingBusyDates(true);
 
       try {
-        const response = await api.get<BusyRange[]>(
+        const response = await api.get<BusyRangesResponse>(
           `${API_ROUTES.bookings}?productId=${encodeURIComponent(productId)}`,
         );
 
         if (!cancelled) {
-          setBusyRanges(response.data);
+          setBusyRanges(response.data.bookings);
+          setResolvedQuantity(
+            response.data.totalQuantity || totalQuantity || 1,
+          );
         }
       } catch {
         if (!cancelled) {
           setBusyRanges([]);
+          setResolvedQuantity(totalQuantity || 1);
         }
       } finally {
         if (!cancelled) {
@@ -255,21 +267,57 @@ export function ProductBookingForm({
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, totalQuantity]);
 
   const activeBusyRanges = useMemo(
     () => busyRanges.filter((range) => range.status !== "cancelled"),
     [busyRanges],
   );
 
-  const bookedRanges = useMemo(
-    () =>
-      activeBusyRanges.map((range) => ({
-        from: parseLocalDate(range.startDate.slice(0, 10)),
-        to: parseLocalDate(range.endDate.slice(0, 10)),
-      })),
-    [activeBusyRanges],
-  );
+  const fullyBookedRanges = useMemo(() => {
+    const dailyCounts = new Map<string, number>();
+
+    for (const range of activeBusyRanges) {
+      const cursor = parseLocalDate(range.startDate.slice(0, 10));
+      const end = parseLocalDate(range.endDate.slice(0, 10));
+
+      while (cursor <= end) {
+        const key = toInputDate(cursor);
+        dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    const fullyBookedDays = Array.from(dailyCounts.entries())
+      .filter(([, count]) => count >= resolvedQuantity)
+      .map(([date]) => date)
+      .sort();
+
+    const result: { from: Date; to: Date }[] = [];
+
+    for (const day of fullyBookedDays) {
+      const currentDate = parseLocalDate(day);
+      const lastRange = result[result.length - 1];
+
+      if (!lastRange) {
+        result.push({ from: currentDate, to: currentDate });
+        continue;
+      }
+
+      const nextDay = new Date(lastRange.to);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      if (toInputDate(nextDay) === day) {
+        lastRange.to = currentDate;
+      } else {
+        result.push({ from: currentDate, to: currentDate });
+      }
+    }
+
+    return result;
+  }, [activeBusyRanges, resolvedQuantity]);
+
+  const bookedRanges = useMemo(() => fullyBookedRanges, [fullyBookedRanges]);
 
   const calendarValue = useMemo<DateRange | undefined>(() => {
     if (!startDate) return undefined;
@@ -283,17 +331,17 @@ export function ProductBookingForm({
   const conflictText = useMemo(() => {
     if (!startDate || !endDate) return "";
 
-    const hasConflict = activeBusyRanges.some((range) =>
+    const overlappingCount = activeBusyRanges.filter((range) =>
       rangesOverlap(
         startDate,
         endDate,
         range.startDate.slice(0, 10),
         range.endDate.slice(0, 10),
       ),
-    );
+    ).length;
 
-    return hasConflict
-      ? "Этот диапазон пересекается с уже существующей бронью"
+    return overlappingCount >= resolvedQuantity
+      ? "На выбранные даты свободного количества товара уже нет"
       : "";
   }, [activeBusyRanges, startDate, endDate]);
 
@@ -361,17 +409,17 @@ export function ProductBookingForm({
       return;
     }
 
-    const hasConflict = activeBusyRanges.some((range) =>
+    const overlappingCount = activeBusyRanges.filter((range) =>
       rangesOverlap(
         startDate,
         endDate,
         range.startDate.slice(0, 10),
         range.endDate.slice(0, 10),
       ),
-    );
+    ).length;
 
-    if (hasConflict) {
-      setError("На выбранные даты товар уже забронирован");
+    if (overlappingCount >= resolvedQuantity) {
+      setError("На выбранные даты свободного количества товара уже нет");
       setLoading(false);
       return;
     }
@@ -395,10 +443,11 @@ export function ProductBookingForm({
         sessionStorage.removeItem(bookingDraftStorageKey);
       }
 
-      const response = await api.get<BusyRange[]>(
+      const response = await api.get<BusyRangesResponse>(
         `${API_ROUTES.bookings}?productId=${encodeURIComponent(productId)}`,
       );
-      setBusyRanges(response.data);
+      setBusyRanges(response.data.bookings);
+      setResolvedQuantity(response.data.totalQuantity || totalQuantity || 1);
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка бронирования"));
     } finally {
@@ -530,6 +579,15 @@ export function ProductBookingForm({
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+          <div className="text-sm font-medium text-zinc-900">
+            Количество в наличии
+          </div>
+          <p className="mt-1 text-sm text-zinc-600">
+            Всего доступно для параллельной аренды: {resolvedQuantity}
+          </p>
         </div>
 
         <div>

@@ -5,6 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import type { BookingDoc } from "@/types/booking";
 import type { UserType } from "@/types";
+import type { ProductDoc } from "@/types/product";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -20,7 +21,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: "Некорректный id бронирования" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Некорректный id бронирования" },
+      { status: 400 },
+    );
   }
 
   const body = (await request.json()) as {
@@ -41,7 +45,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   if (!user?._id) {
-    return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Пользователь не найден" },
+      { status: 404 },
+    );
   }
 
   const booking = await db.collection<BookingDoc>("bookings").findOne({
@@ -49,7 +56,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   if (!booking?._id) {
-    return NextResponse.json({ error: "Бронирование не найдено" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Бронирование не найдено" },
+      { status: 404 },
+    );
   }
 
   if (String(booking.productOwnerId) !== String(user._id)) {
@@ -64,17 +74,30 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (nextStatus === "confirmed") {
-    const conflicts = await db.collection<BookingDoc>("bookings").find({
-      _id: { $ne: booking._id },
-      productId: booking.productId,
-      status: "confirmed",
-      startDate: { $lte: booking.endDate },
-      endDate: { $gte: booking.startDate },
-    }).toArray();
+    const product = await db.collection<ProductDoc>("products").findOne({
+      _id: booking.productId,
+    });
 
-    if (conflicts.length > 0) {
+    if (!product?._id) {
+      return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+    }
+
+    const conflicts = await db.collection<BookingDoc>("bookings").countDocuments(
+      {
+        _id: { $ne: booking._id },
+        productId: booking.productId,
+        status: "confirmed",
+        startDate: { $lte: booking.endDate },
+        endDate: { $gte: booking.startDate },
+      },
+    );
+
+    if (conflicts >= (product.quantity ?? 1)) {
       return NextResponse.json(
-        { error: "Невозможно подтвердить: даты уже заняты другой бронью" },
+        {
+          error:
+            "Невозможно подтвердить: свободного количества на эти даты уже нет",
+        },
         { status: 409 },
       );
     }

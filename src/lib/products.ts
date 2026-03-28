@@ -7,6 +7,7 @@ const COLLECTION = "products";
 
 export type ApprovedProductWithAvailability = ProductDoc & {
   isAvailableNow: boolean;
+  availableQuantityNow: number;
   cityPriority?: number;
 };
 
@@ -123,11 +124,38 @@ export async function getApprovedProductsWithAvailability(
                       },
                     },
                   },
-                  { $limit: 1 },
                 ],
                 as: "activeBookingsToday",
               },
             },
+            {
+              $addFields: {
+                availableQuantityNow: {
+                  $max: [
+                    0,
+                    {
+                      $subtract: [
+                        { $ifNull: ["$quantity", 1] },
+                        { $size: "$activeBookingsToday" },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $addFields: {
+                isAvailableNow: {
+                  $gt: ["$availableQuantityNow", 0],
+                },
+              },
+            },
+            {
+              $project: {
+                activeBookingsToday: 0,
+              },
+            },
+            ,
             {
               $addFields: {
                 isAvailableNow: {

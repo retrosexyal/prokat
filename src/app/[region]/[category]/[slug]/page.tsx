@@ -329,6 +329,7 @@ export default async function ProductPage({ params }: Props) {
               <ProductBookingForm
                 productId={product._id!.toString()}
                 minDays={product.minDays}
+                totalQuantity={product.quantity ?? 1}
               />
             </div>
           </div>

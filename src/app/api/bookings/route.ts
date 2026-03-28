@@ -43,6 +43,14 @@ export async function GET(request: Request) {
   const client = await clientPromise;
   const db = client.db();
 
+  const product = await db.collection<ProductDoc>("products").findOne({
+    _id: new ObjectId(productId),
+  });
+
+  if (!product?._id) {
+    return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+  }
+
   const bookings = await db
     .collection<BookingDoc>("bookings")
     .find({
@@ -52,14 +60,15 @@ export async function GET(request: Request) {
     .sort({ startDate: 1 })
     .toArray();
 
-  return NextResponse.json(
-    bookings.map((booking) => ({
+  return NextResponse.json({
+    totalQuantity: product.quantity ?? 1,
+    bookings: bookings.map((booking) => ({
       _id: booking._id?.toString(),
       startDate: booking.startDate.toISOString(),
       endDate: booking.endDate.toISOString(),
       status: booking.status,
     })),
-  );
+  });
 }
 
 export async function POST(request: Request) {
@@ -166,17 +175,16 @@ export async function POST(request: Request) {
 
   const conflicts = await db
     .collection<BookingDoc>("bookings")
-    .find({
+    .countDocuments({
       productId: product._id,
       status: "confirmed",
       startDate: { $lte: endDate },
       endDate: { $gte: startDate },
-    })
-    .toArray();
+    });
 
-  if (conflicts.length > 0) {
+  if (conflicts >= (product.quantity ?? 1)) {
     return NextResponse.json(
-      { error: "На выбранные даты товар уже забронирован" },
+      { error: "На выбранные даты свободного количества товара уже нет" },
       { status: 409 },
     );
   }

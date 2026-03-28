@@ -13,6 +13,7 @@ export function toProductView(product: ProductDoc): ProductView {
     depositBYN: product.depositBYN,
     pricePerDayBYN: product.pricePerDayBYN,
     minDays: product.minDays,
+    quantity: product.quantity ?? 1,
     city: product.city,
     citySlug: product.citySlug,
     images: product.images,

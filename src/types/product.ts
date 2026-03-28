@@ -15,6 +15,7 @@ export type ProductDoc = {
   depositBYN: number;
   pricePerDayBYN: number;
   minDays: number;
+  quantity: number;
   city: string;
   citySlug: CitySlug;
   images: string[];
@@ -38,6 +39,7 @@ export type ProductView = {
   depositBYN: number;
   pricePerDayBYN: number;
   minDays: number;
+  quantity: number;
   city: string;
   citySlug: CitySlug;
   images: string[];

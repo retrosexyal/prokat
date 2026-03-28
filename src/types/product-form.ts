@@ -10,6 +10,7 @@ export type ProductFormValues = {
   depositBYN: number;
   pricePerDayBYN: number;
   minDays: number;
+  quantity: number;
   city: string;
   citySlug: CitySlug;
   pickupAddress: string;
@@ -24,6 +25,7 @@ export const emptyProductForm: ProductFormValues = {
   depositBYN: 0,
   pricePerDayBYN: 0,
   minDays: 1,
+  quantity: 1,
   city: "Могилёв",
   citySlug: "mogilev",
   pickupAddress: "",
