@@ -28,20 +28,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const categoryPages: MetadataRoute.Sitemap = CITIES.flatMap((city) =>
-    categories.map((category) => ({
-      url: `${base}/${city.slug}/${category.slug}`,
-      lastModified: now,
-    })),
+    categories
+      .filter(
+        (category) => typeof category.slug === "string" && category.slug.length > 0,
+      )
+      .map((category) => ({
+        url: `${base}/${city.slug}/${category.slug}`,
+        lastModified: now,
+      })),
   );
 
-  const productPages: MetadataRoute.Sitemap = products.map((product) => ({
-    url: `${base}${getProductPath({
-      slug: product.slug,
-      category: product.category,
-      citySlug: product.citySlug,
-    })}`,
-    lastModified: product.updatedAt ?? now,
-  }));
+  const productPages: MetadataRoute.Sitemap = products.flatMap((product) => {
+    if (
+      typeof product.citySlug !== "string" ||
+      !product.citySlug ||
+      typeof product.category !== "string" ||
+      !product.category ||
+      typeof product.slug !== "string" ||
+      !product.slug
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        url: `${base}${getProductPath({
+          slug: product.slug,
+          category: product.category,
+          citySlug: product.citySlug,
+        })}`,
+        lastModified: product.updatedAt ?? now,
+      },
+    ];
+  });
 
   return [...staticPages, ...regionPages, ...categoryPages, ...productPages];
 }

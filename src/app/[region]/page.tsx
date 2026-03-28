@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const isAll = region === ALL_REGION_SLUG;
+  const canonical = isAll ? "/all" : `/${region}`;
 
   const title = isAll
     ? "Все товары в аренду по Беларуси | Prokatik.by"
@@ -62,15 +63,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: {
-      canonical: isAll ? "/all" : `/${region}`,
+      canonical,
     },
     openGraph: {
       title,
       description,
-      url: isAll ? "/all" : `/${region}`,
+      url: canonical,
       siteName: "Prokatik.by",
       locale: "ru_BY",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }

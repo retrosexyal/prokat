@@ -22,7 +22,7 @@ type Props = {
 export async function generateStaticParams() {
   const categories = await getAllCategories();
 
-  const regions = [
+  return [
     "all",
     "mogilev",
     "minsk",
@@ -30,12 +30,11 @@ export async function generateStaticParams() {
     "vitebsk",
     "grodno",
     "brest",
-  ];
-
-  return regions.flatMap((region) =>
+  ].flatMap((region) =>
     categories
       .filter(
-        (category) => typeof category.slug === "string" && category.slug.length > 0,
+        (category) =>
+          typeof category.slug === "string" && category.slug.length > 0,
       )
       .map((category) => ({
         region,
@@ -69,6 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const isAll = region === ALL_REGION_SLUG;
+  const canonical = isAll ? `/all/${category}` : `/${region}/${category}`;
 
   const title = isAll
     ? `${categoryItem.name} в аренду по Беларуси | Prokatik.by`
@@ -77,8 +77,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = isAll
     ? `${categoryItem.name} в аренду по Беларуси: предложения, цены, условия бронирования и размещения.`
     : `${categoryItem.name} в аренду в ${city.nameIn}: предложения, цены, условия бронирования и размещения на Prokatik.by.`;
-
-  const canonical = isAll ? `/all/${category}` : `/${region}/${category}`;
 
   return {
     title,
@@ -93,6 +91,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "Prokatik.by",
       locale: "ru_BY",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }

@@ -13,9 +13,7 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
   const requestCity = await getRequestCity();
 
   const initialRegion: RegionSlug =
-    forcedRegion && isRegionSlug(forcedRegion)
-      ? forcedRegion
-      : requestCity.slug;
+    forcedRegion && isRegionSlug(forcedRegion) ? forcedRegion : requestCity.slug;
 
   const currentCity =
     forcedRegion && forcedRegion !== "all"

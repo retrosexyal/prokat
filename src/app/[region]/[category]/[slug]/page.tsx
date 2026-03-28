@@ -56,15 +56,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     citySlug: product.citySlug,
   });
 
+  const title = `${product.name} | Prokatik.by`;
+  const description = `${product.short} Цена: ${product.pricePerDayBYN} BYN/сутки.`;
+
   return {
-    title: product.name,
-    description: `${product.short} Цена: ${product.pricePerDayBYN} BYN/сутки.`,
-    alternates: { canonical },
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
     openGraph: {
-      title: product.name,
-      description: product.short,
+      title,
+      description,
       url: canonical,
+      siteName: "Prokatik.by",
+      locale: "ru_BY",
+      type: "website",
       images: product.images?.[0] ? [{ url: product.images[0] }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: product.images?.[0] ? [product.images[0]] : undefined,
     },
   };
 }

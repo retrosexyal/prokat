@@ -1,7 +1,25 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getApprovedProducts } from "@/lib/products";
 import { ProductCard } from "@/components/ProductCard";
-import { HomeCatalogLink } from "@/components/HomeCatalogLink";
+
+export const metadata: Metadata = {
+  title: "Аренда товаров по Беларуси | Prokatik.by",
+  description:
+    "Платформа аренды товаров по Беларуси. Ищите и размещайте предложения по аренде инструментов, техники и других товаров.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Аренда товаров по Беларуси | Prokatik.by",
+    description:
+      "Платформа аренды товаров по Беларуси. Ищите и размещайте предложения по аренде инструментов, техники и других товаров.",
+    url: "/",
+    siteName: "Prokatik.by",
+    locale: "ru_BY",
+    type: "website",
+  },
+};
 
 export default async function HomePage() {
   const products = await getApprovedProducts({ limit: 6 });
@@ -23,7 +41,12 @@ export default async function HomePage() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <HomeCatalogLink />
+            <Link
+              href="/all"
+              className="inline-flex items-center justify-center rounded-full bg-accent-strong px-6 py-3 text-sm font-semibold text-black hover:bg-accent"
+            >
+              Открыть каталог
+            </Link>
 
             <Link
               href="/dashboard"
