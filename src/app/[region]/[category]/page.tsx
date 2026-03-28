@@ -22,7 +22,7 @@ type Props = {
 export async function generateStaticParams() {
   const categories = await getAllCategories();
 
-  return [
+  const regions = [
     "all",
     "mogilev",
     "minsk",
@@ -30,11 +30,17 @@ export async function generateStaticParams() {
     "vitebsk",
     "grodno",
     "brest",
-  ].flatMap((region) =>
-    categories.map((category) => ({
-      region,
-      category: category.slug,
-    })),
+  ];
+
+  return regions.flatMap((region) =>
+    categories
+      .filter(
+        (category) => typeof category.slug === "string" && category.slug.length > 0,
+      )
+      .map((category) => ({
+        region,
+        category: category.slug,
+      })),
   );
 }
 

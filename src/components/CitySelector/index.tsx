@@ -51,16 +51,9 @@ function buildTargetPath(pathname: string, region: RegionSlug): string {
       return region === "all" ? "/all" : `/${region}`;
     }
 
-    return region === "all"
-      ? `/all/${rest.join("/")}`
-      : `/${region}/${rest.join("/")}`;
-  }
-
-  if (segments[0] === "catalog") {
-    const rest = segments.slice(1);
-
-    if (rest.length === 0) {
-      return region === "all" ? "/all" : `/${region}`;
+    if (rest.length >= 2) {
+      const category = rest[0];
+      return region === "all" ? `/all/${category}` : `/${region}/${category}`;
     }
 
     return region === "all"

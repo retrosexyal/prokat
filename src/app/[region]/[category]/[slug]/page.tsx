@@ -20,11 +20,26 @@ type Props = {
 export async function generateStaticParams() {
   const products = await getApprovedProducts();
 
-  return products.map((product) => ({
-    region: product.citySlug,
-    category: product.category,
-    slug: product.slug,
-  }));
+  return products.flatMap((product) => {
+    if (
+      typeof product.citySlug !== "string" ||
+      !product.citySlug ||
+      typeof product.category !== "string" ||
+      !product.category ||
+      typeof product.slug !== "string" ||
+      !product.slug
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        region: product.citySlug,
+        category: product.category,
+        slug: product.slug,
+      },
+    ];
+  });
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -35,7 +50,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {};
   }
 
-  const category = await getCategoryBySlug(product.category);
   const canonical = getProductPath({
     slug: product.slug,
     category: product.category,

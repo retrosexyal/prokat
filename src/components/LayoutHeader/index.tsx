@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CatalogSearch } from "@/components/CatalogSearch";
 import { CitySelector } from "@/components/CitySelector";
 import { getRequestCity } from "@/lib/request-city";
-import {  getRealCityBySlug, isRegionSlug, type RegionSlug } from "@/lib/cities";
+import { getRealCityBySlug, isRegionSlug, type RegionSlug } from "@/lib/cities";
 
 type LayoutHeaderProps = {
   forcedRegion?: string;
@@ -13,7 +13,9 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
   const requestCity = await getRequestCity();
 
   const initialRegion: RegionSlug =
-    forcedRegion && isRegionSlug(forcedRegion) ? forcedRegion : requestCity.slug;
+    forcedRegion && isRegionSlug(forcedRegion)
+      ? forcedRegion
+      : requestCity.slug;
 
   const currentCity =
     forcedRegion && forcedRegion !== "all"
