@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getApprovedProducts } from "@/lib/products";
 import { ProductCard } from "@/components/ProductCard";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Аренда товаров по Беларуси | Prokatik.by",
   description:
