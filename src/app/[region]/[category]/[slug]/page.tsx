@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(decodeURIComponent(slug));
 
-  if (!product) {
+  if (product?.status !== "approved") {
     return {};
   }
 
@@ -93,7 +93,7 @@ export default async function ProductPage({ params }: Props) {
 
   const product = await getProductBySlug(decodedSlug);
 
-  if (!product) {
+  if (product?.status !== "approved") {
     notFound();
   }
 

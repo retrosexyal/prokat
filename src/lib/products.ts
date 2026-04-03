@@ -92,88 +92,75 @@ export async function getApprovedProductsWithAvailability(
       };
 
   const result = await db
-    .collection<ProductDoc>(COLLECTION)
-    .aggregate([
-      { $match: matchStage },
-      cityPriorityStage,
-      {
-        $facet: {
-          items: [
-            {
-              $sort: {
-                cityPriority: 1,
-                createdAt: -1,
-              },
+  .collection<ProductDoc>(COLLECTION)
+  .aggregate([
+    { $match: matchStage },
+    cityPriorityStage,
+    {
+      $facet: {
+        items: [
+          {
+            $sort: {
+              cityPriority: 1,
+              createdAt: -1,
             },
-            { $skip: skip },
-            { $limit: limit },
-            {
-              $lookup: {
-                from: "bookings",
-                let: { productId: "$_id" },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ["$productId", "$$productId"] },
-                          { $eq: ["$status", "confirmed"] },
-                          { $lte: ["$startDate", endOfDay] },
-                          { $gte: ["$endDate", startOfDay] },
-                        ],
-                      },
-                    },
-                  },
-                ],
-                as: "activeBookingsToday",
-              },
-            },
-            {
-              $addFields: {
-                availableQuantityNow: {
-                  $max: [
-                    0,
-                    {
-                      $subtract: [
-                        { $ifNull: ["$quantity", 1] },
-                        { $size: "$activeBookingsToday" },
+          },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: "bookings",
+              let: { productId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$productId", "$$productId"] },
+                        { $eq: ["$status", "confirmed"] },
+                        { $lte: ["$startDate", endOfDay] },
+                        { $gte: ["$endDate", startOfDay] },
                       ],
                     },
-                  ],
+                  },
                 },
+              ],
+              as: "activeBookingsToday",
+            },
+          },
+          {
+            $addFields: {
+              availableQuantityNow: {
+                $max: [
+                  0,
+                  {
+                    $subtract: [
+                      { $ifNull: ["$quantity", 1] },
+                      { $size: "$activeBookingsToday" },
+                    ],
+                  },
+                ],
               },
             },
-            {
-              $addFields: {
-                isAvailableNow: {
-                  $gt: ["$availableQuantityNow", 0],
-                },
+          },
+          {
+            $addFields: {
+              isAvailableNow: {
+                $gt: ["$availableQuantityNow", 0],
               },
             },
-            {
-              $project: {
-                activeBookingsToday: 0,
-              },
+          },
+          {
+            $project: {
+              activeBookingsToday: 0,
             },
-            ,
-            {
-              $addFields: {
-                isAvailableNow: {
-                  $eq: [{ $size: "$activeBookingsToday" }, 0],
-                },
-              },
-            },
-            {
-              $project: {
-                activeBookingsToday: 0,
-              },
-            },
-          ],
-          totalCount: [{ $count: "count" }],
-        },
+          },
+        ],
+        totalCount: [{ $count: "count" }],
       },
-    ])
-    .toArray();
+    },
+  ])
+  .toArray();
 
   const first = result[0];
   const products = (first?.items ?? []) as ApprovedProductWithAvailability[];

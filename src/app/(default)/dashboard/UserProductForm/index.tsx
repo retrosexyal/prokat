@@ -1,12 +1,12 @@
 "use client";
 
-import { SubmitEvent, useEffect, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import { validateImageFile } from "@/lib/image-validation";
-import type { ProductView } from "@/types/product";
+import type { ProductView, ProductStatus } from "@/types/product";
 import type { ProductFormValues } from "@/types/product-form";
 import { emptyProductForm } from "@/types/product-form";
 import { ProductCard } from "@/components/ProductCard";
@@ -25,6 +25,11 @@ type Props = {
   categories: CategoryView[];
 };
 
+type ExistingImage = {
+  url: string;
+  publicId?: string;
+};
+
 const MAX_IMAGES = 10;
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -34,6 +39,18 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function getStatusLabel(status: ProductStatus): string {
+  switch (status) {
+    case "approved":
+      return "Подтвержден";
+    case "rejected":
+      return "Отклонен";
+    case "pending":
+    default:
+      return "На модерации";
+  }
 }
 
 export function UserProductForm({
@@ -49,6 +66,9 @@ export function UserProductForm({
     ...emptyProductForm,
     pickupAddress: initialPickupAddress,
   });
+
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,6 +79,23 @@ export function UserProductForm({
   );
   const [bookings, setBookings] = useState<BookingView[]>(initialBookings);
   const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+
+  const totalImagesCount = existingImages.length + imageFiles.length;
+  const isEditing = editingProductId !== null;
+
+  const submitButtonLabel = useMemo(() => {
+    if (loading && isEditing) {
+      return "Сохранение...";
+    }
+
+    if (loading) {
+      return "Отправка...";
+    }
+
+    return isEditing
+      ? "Сохранить и отправить на модерацию"
+      : "Отправить на модерацию";
+  }, [isEditing, loading]);
 
   useEffect(() => {
     setBookings(initialBookings);
@@ -78,6 +115,44 @@ export function UserProductForm({
     };
   }, [imageFiles]);
 
+  function resetForm(): void {
+    setEditingProductId(null);
+    setExistingImages([]);
+    setImageFiles([]);
+    setPreviewUrls([]);
+    setForm({ ...emptyProductForm, pickupAddress: initialPickupAddress });
+    setError("");
+  }
+
+  function startEditing(product: ProductView): void {
+    setError("");
+    setEditingProductId(product._id ?? null);
+    setForm({
+      name: product.name ?? "",
+      slug: product.slug ?? "",
+      category: product.category as ProductFormValues["category"],
+      short: product.short ?? "",
+      organization: product.organization ?? "",
+      depositBYN: product.depositBYN ?? 0,
+      pricePerDayBYN: product.pricePerDayBYN ?? 0,
+      minDays: product.minDays ?? 1,
+      quantity: product.quantity ?? 1,
+      city: product.city ?? "Могилёв",
+      citySlug: product.citySlug ?? "mogilev",
+      pickupAddress: product.pickupAddress ?? "",
+    });
+
+    setExistingImages(
+      (product.images ?? []).map((url, index) => ({
+        url,
+        publicId: product.imagePublicIds?.[index],
+      })),
+    );
+    setImageFiles([]);
+    setPreviewUrls([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function handleFileChange(
     event: React.ChangeEvent<HTMLInputElement>,
   ): Promise<void> {
@@ -90,8 +165,9 @@ export function UserProductForm({
     }
 
     const nextFiles = [...imageFiles, ...selectedFiles];
+    const nextTotal = existingImages.length + nextFiles.length;
 
-    if (nextFiles.length > MAX_IMAGES) {
+    if (nextTotal > MAX_IMAGES) {
       event.target.value = "";
       setError(`Можно загрузить не более ${MAX_IMAGES} изображений`);
       return;
@@ -115,7 +191,11 @@ export function UserProductForm({
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function removeAllImages(): void {
+  function removeExistingImage(index: number): void {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removeAllNewImages(): void {
     setImageFiles([]);
     setPreviewUrls([]);
   }
@@ -143,24 +223,48 @@ export function UserProductForm({
       formData.append("citySlug", form.citySlug);
       formData.append("quantity", String(form.quantity));
 
+      existingImages.forEach((image) => {
+        formData.append("keptImages", image.url);
+        if (image.publicId) {
+          formData.append("keptImagePublicIds", image.publicId);
+        }
+      });
+
       imageFiles.forEach((file) => {
         formData.append("files", file);
       });
 
-      const response = await api.post<ProductView>(
-        API_ROUTES.products,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
+      if (isEditing && editingProductId) {
+        const response = await api.patch<ProductView>(
+          API_ROUTES.productById(editingProductId),
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
           },
-        },
-      );
+        );
 
-      setProducts((prev) => [response.data, ...prev]);
-      setForm({ ...emptyProductForm, pickupAddress: initialPickupAddress });
-      setImageFiles([]);
-      setPreviewUrls([]);
+        setProducts((prev) =>
+          prev.map((product) =>
+            product._id === editingProductId ? response.data : product,
+          ),
+        );
+      } else {
+        const response = await api.post<ProductView>(
+          API_ROUTES.products,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          },
+        );
+
+        setProducts((prev) => [response.data, ...prev]);
+      }
+
+      resetForm();
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка сохранения товара"));
@@ -182,6 +286,11 @@ export function UserProductForm({
       setProducts((prev) =>
         prev.filter((product) => product._id !== productToDelete._id),
       );
+
+      if (editingProductId === productToDelete._id) {
+        resetForm();
+      }
+
       setProductToDelete(null);
       router.refresh();
     } catch (error: unknown) {
@@ -230,10 +339,13 @@ export function UserProductForm({
       <div className="space-y-8">
         <section className="bg-white rounded-xl border border-border-subtle p-4 sm:p-6">
           <h2 className="text-xl sm:text-2xl font-semibold mb-4">
-            Добавить товар
+            {isEditing ? "Редактировать товар" : "Добавить товар"}
           </h2>
+
           <p className="text-xs sm:text-sm text-zinc-600 mb-4">
-            Заполните поля и отправьте товар на модерацию.
+            {isEditing
+              ? "После сохранения товар снова уйдет на модерацию."
+              : "Заполните поля и отправьте товар на модерацию."}
           </p>
 
           <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
@@ -294,6 +406,7 @@ export function UserProductForm({
                 ))}
               </select>
             </label>
+
             <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
               Адрес самовывоза или укажите если доставка
               <input
@@ -402,11 +515,40 @@ export function UserProductForm({
                 multiple
                 maxFiles={MAX_IMAGES}
                 onChange={handleFileChange}
-                helperText="JPEG, PNG, WEBP"
+                helperText={`JPEG, PNG, WEBP • выбрано ${totalImagesCount} из ${MAX_IMAGES}`}
               />
+
+              {existingImages.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="text-xs text-zinc-500">
+                    Уже загруженные изображения
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    {existingImages.map((image, index) => (
+                      <div key={`${image.url}-${index}`} className="space-y-2">
+                        <img
+                          src={image.url}
+                          alt={`Текущее изображение ${index + 1}`}
+                          className="h-40 w-full rounded-lg border object-cover"
+                        />
+                        <button
+                          type="button"
+                          className="text-xs text-red-600"
+                          onClick={() => removeExistingImage(index)}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {previewUrls.length > 0 ? (
                 <div className="space-y-3">
+                  <div className="text-xs text-zinc-500">Новые изображения</div>
+
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                     {previewUrls.map((url, index) => (
                       <div key={`${url}-${index}`} className="space-y-2">
@@ -429,9 +571,9 @@ export function UserProductForm({
                   <button
                     type="button"
                     className="text-xs text-red-600"
-                    onClick={removeAllImages}
+                    onClick={removeAllNewImages}
                   >
-                    Убрать все изображения
+                    Убрать все новые изображения
                   </button>
                 </div>
               ) : null}
@@ -441,14 +583,25 @@ export function UserProductForm({
               <div className="sm:col-span-2 text-xs text-red-600">{error}</div>
             ) : null}
 
-            <div className="sm:col-span-2 flex gap-3">
+            <div className="sm:col-span-2 flex flex-wrap gap-3">
               <button
                 type="submit"
                 disabled={loading}
                 className="rounded-full bg-accent-strong px-6 py-2 text-sm font-semibold text-black disabled:opacity-60"
               >
-                {loading ? "Отправка..." : "Отправить на модерацию"}
+                {submitButtonLabel}
               </button>
+
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={loading}
+                  className="rounded-full border border-border-subtle px-6 py-2 text-sm font-semibold text-zinc-700 disabled:opacity-60"
+                >
+                  Отмена
+                </button>
+              ) : null}
             </div>
           </form>
         </section>
@@ -465,7 +618,10 @@ export function UserProductForm({
                 const images = product.images;
 
                 return (
-                  <div key={productId ?? product.slug} className="relative">
+                  <div
+                    key={productId ?? product.slug}
+                    className="relative flex h-full flex-col rounded-xl"
+                  >
                     {productId ? (
                       <button
                         type="button"
@@ -480,21 +636,38 @@ export function UserProductForm({
                       </button>
                     ) : null}
 
-                    <ProductCard
-                      name={product.name}
-                      slug={product.slug}
-                      category={product.category}
-                      citySlug={product.citySlug}
-                      images={images}
-                      pricePerDay={product.pricePerDayBYN}
-                      available={product.status === "approved"}
-                      minDays={1}
-                      productId={product._id?.toString() || ""}
-                      isHideButton
-                    />
+                    <div className="min-w-0 overflow-hidden rounded-xl">
+                      <ProductCard
+                        name={product.name}
+                        slug={product.slug}
+                        category={product.category}
+                        citySlug={product.citySlug}
+                        images={images}
+                        pricePerDay={product.pricePerDayBYN}
+                        available={product.status === "approved"}
+                        minDays={1}
+                        productId={product._id?.toString() || ""}
+                        isHideButton
+                      />
+                    </div>
 
-                    <div className="mt-2 px-1 text-sm text-zinc-500">
-                      Статус: {product.status} · Кол-во: {product.quantity ?? 1}
+                    <div className="mt-3 flex flex-col gap-2 px-1">
+                      <div className="text-sm leading-5 text-zinc-500 break-words">
+                        Статус: {getStatusLabel(product.status)} · Кол-во:{" "}
+                        {product.quantity ?? 1}
+                      </div>
+
+                      {productId ? (
+                        <div className="flex">
+                          <Button
+                            type="button"
+                            onClick={() => startEditing(product)}
+                            newClasses="bg-transparent border border-border-subtle text-zinc-800 px-4 py-2 w-full sm:w-auto"
+                          >
+                            Редактировать
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -529,6 +702,7 @@ export function UserProductForm({
                         Контакт:{" "}
                         {booking.renterEmail ?? "Гость без регистрации"}
                       </div>
+
                       {booking.guestIpAddress ? (
                         <div className="text-sm text-zinc-600">
                           IP: {booking.guestIpAddress}
@@ -564,6 +738,7 @@ export function UserProductForm({
                           Подтвердить
                         </Button>
                       )}
+
                       <Button
                         onClick={() =>
                           handleBookingStatusChange(booking._id, "cancelled")
