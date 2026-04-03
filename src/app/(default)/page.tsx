@@ -16,11 +16,21 @@ export const metadata: Metadata = {
     title: "Аренда товаров по Беларуси | Prokatik.by",
     description:
       "Платформа аренды товаров по Беларуси. Ищите и размещайте предложения по аренде инструментов, техники и других товаров.",
-    url: "/",
+    url: "https://prokatik.by",
     siteName: "Prokatik.by",
     locale: "ru_BY",
     type: "website",
+    images: ["/og.png"],
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default async function HomePage() {
