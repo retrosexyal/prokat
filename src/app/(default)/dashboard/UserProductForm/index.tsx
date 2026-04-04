@@ -17,17 +17,25 @@ import { FileDropzone } from "@/components/ui/FileDropzone";
 import { Button } from "@/components/ui/Button";
 import { CategoryView } from "@/types/category";
 import { CITIES, getRealCityBySlug } from "@/lib/cities";
+import type { MonetizationRequestType } from "@/types/monetization";
 
 type Props = {
   initialProducts: ProductView[];
   initialBookings: BookingView[];
   initialPickupAddress?: string;
   categories: CategoryView[];
+  currentProductLimit: number;
 };
 
 type ExistingImage = {
   url: string;
   publicId?: string;
+};
+
+type MonetizationModalState = {
+  open: boolean;
+  type: MonetizationRequestType;
+  product: ProductView | null;
 };
 
 const MAX_IMAGES = 10;
@@ -58,6 +66,7 @@ export function UserProductForm({
   initialBookings,
   initialPickupAddress = "",
   categories,
+  currentProductLimit,
 }: Props) {
   const router = useRouter();
 
@@ -79,6 +88,17 @@ export function UserProductForm({
   );
   const [bookings, setBookings] = useState<BookingView[]>(initialBookings);
   const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+  const [monetizationModal, setMonetizationModal] =
+    useState<MonetizationModalState>({
+      open: false,
+      type: "boost_product",
+      product: null,
+    });
+  const [monetizationMessage, setMonetizationMessage] = useState("");
+  const [requestedLimitIncrease, setRequestedLimitIncrease] = useState(1);
+  const [requestedBoostValue, setRequestedBoostValue] = useState(1);
+  const [monetizationLoading, setMonetizationLoading] = useState(false);
+  const [monetizationSuccess, setMonetizationSuccess] = useState("");
 
   const totalImagesCount = existingImages.length + imageFiles.length;
   const isEditing = editingProductId !== null;
@@ -297,6 +317,76 @@ export function UserProductForm({
       setError(getApiErrorMessage(error, "Ошибка удаления товара"));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function openBoostModal(product: ProductView): void {
+    setError("");
+    setMonetizationSuccess("");
+    setRequestedBoostValue(Math.max(product.ratingBoost ?? 0, 0) + 1);
+    setMonetizationMessage(
+      `Хочу поднять товар "${product.name}" выше в каталоге.`,
+    );
+    setMonetizationModal({
+      open: true,
+      type: "boost_product",
+      product,
+    });
+  }
+
+  function openLimitModal(): void {
+    setError("");
+    setMonetizationSuccess("");
+    setRequestedLimitIncrease(1);
+    setMonetizationMessage(
+      "Хочу увеличить лимит на размещение товаров в кабинете.",
+    );
+    setMonetizationModal({
+      open: true,
+      type: "increase_limit",
+      product: null,
+    });
+  }
+
+  function closeMonetizationModal(): void {
+    if (monetizationLoading) {
+      return;
+    }
+
+    setMonetizationModal((prev) => ({
+      ...prev,
+      open: false,
+      product: null,
+    }));
+  }
+
+  async function handleMonetizationSubmit(): Promise<void> {
+    setError("");
+    setMonetizationSuccess("");
+    setMonetizationLoading(true);
+
+    try {
+      await api.post(API_ROUTES.monetizationRequests, {
+        type: monetizationModal.type,
+        productId: monetizationModal.product?._id,
+        requestedLimitIncrease,
+        requestedBoostValue,
+        message: monetizationMessage,
+      });
+
+      setMonetizationSuccess(
+        "Заявка отправлена администратору. Сейчас используется заглушка оплаты через ЕРИП/EPOS.",
+      );
+
+      setMonetizationModal({
+        open: false,
+        type: "boost_product",
+        product: null,
+      });
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Ошибка отправки заявки"));
+    } finally {
+      setMonetizationLoading(false);
     }
   }
 
@@ -606,6 +696,35 @@ export function UserProductForm({
           </form>
         </section>
 
+        <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Продвижение и лимиты</h2>
+              <div className="mt-1 text-sm text-zinc-600">
+                Сейчас занято {products.length} из {currentProductLimit}{" "}
+                доступных слотов. Поднятие рейтинга влияет на сортировку товара
+                внутри каталога.
+              </div>
+            </div>
+
+            <Button type="button" onClick={openLimitModal}>
+              Увеличить лимит товаров
+            </Button>
+          </div>
+
+          {monetizationSuccess ? (
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {monetizationSuccess}
+            </div>
+          ) : null}
+
+          <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
+            Пока здесь подключена заглушка: пользователь оставляет заявку,
+            администратор подтверждает услугу, а позже сюда можно подключить
+            реальный EPOS/ЕРИП-инвойс.
+          </div>
+        </section>
+
         <section className="space-y-3">
           <h2 className="text-xl font-medium">Мои товары</h2>
 
@@ -654,17 +773,26 @@ export function UserProductForm({
                     <div className="mt-3 flex flex-col gap-2 px-1">
                       <div className="text-sm leading-5 text-zinc-500 break-words">
                         Статус: {getStatusLabel(product.status)} · Кол-во:{" "}
-                        {product.quantity ?? 1}
+                        {product.quantity ?? 1} · Рейтинг:{" "}
+                        {product.ratingBoost ?? 0}
                       </div>
 
                       {productId ? (
-                        <div className="flex">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                           <Button
                             type="button"
                             onClick={() => startEditing(product)}
                             newClasses="bg-transparent border border-border-subtle text-zinc-800 px-4 py-2 w-full sm:w-auto"
                           >
                             Редактировать
+                          </Button>
+
+                          <Button
+                            type="button"
+                            onClick={() => openBoostModal(product)}
+                            newClasses="px-4 py-2 w-full sm:w-auto"
+                          >
+                            Повысить рейтинг
                           </Button>
                         </div>
                       ) : null}
@@ -756,6 +884,103 @@ export function UserProductForm({
           )}
         </section>
       </div>
+
+      <Modal
+        open={monetizationModal.open}
+        onClose={closeMonetizationModal}
+        title={
+          monetizationModal.type === "boost_product"
+            ? "Повысить рейтинг товара"
+            : "Увеличить лимит товаров"
+        }
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-zinc-600">
+            {monetizationModal.type === "boost_product" ? (
+              <>
+                Товар:{" "}
+                <span className="font-medium">
+                  {monetizationModal.product?.name}
+                </span>
+                . После оплаты администратор сможет применить буст и товар
+                начнёт подниматься выше в выдаче.
+              </>
+            ) : (
+              <>
+                Отправь заявку администратору на увеличение лимита товаров. Пока
+                оплата работает через заглушку под ЕРИП/EPOS.
+              </>
+            )}
+          </div>
+
+          {monetizationModal.type === "boost_product" ? (
+            <label className="flex flex-col gap-1 text-sm">
+              На сколько повысить рейтинг
+              <input
+                type="number"
+                min={1}
+                className="rounded-md border px-3 py-2 text-sm"
+                value={requestedBoostValue}
+                onChange={(event) =>
+                  setRequestedBoostValue(
+                    Math.max(1, Number(event.target.value) || 1),
+                  )
+                }
+              />
+            </label>
+          ) : (
+            <label className="flex flex-col gap-1 text-sm">
+              На сколько увеличить лимит товаров
+              <input
+                type="number"
+                min={1}
+                className="rounded-md border px-3 py-2 text-sm"
+                value={requestedLimitIncrease}
+                onChange={(event) =>
+                  setRequestedLimitIncrease(
+                    Math.max(1, Number(event.target.value) || 1),
+                  )
+                }
+              />
+            </label>
+          )}
+
+          <label className="flex flex-col gap-1 text-sm">
+            Комментарий для администратора
+            <textarea
+              rows={4}
+              className="rounded-md border px-3 py-2 text-sm"
+              value={monetizationMessage}
+              onChange={(event) => setMonetizationMessage(event.target.value)}
+              placeholder="Например: хочу поднять товар перед сезоном"
+            />
+          </label>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Следующий шаг для тебя: после создания заявки вместо этой заглушки
+            можно подключить создание реального платежа через ЕРИП/EPOS.
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={handleMonetizationSubmit}
+              disabled={monetizationLoading}
+            >
+              {monetizationLoading ? "Отправка..." : "Отправить заявку"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={closeMonetizationModal}
+              disabled={monetizationLoading}
+              newClasses="bg-transparent border border-border-subtle text-zinc-800"
+            >
+              Отмена
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={productToDelete !== null}

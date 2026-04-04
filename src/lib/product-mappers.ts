@@ -23,6 +23,8 @@ export function toProductView(product: ProductDoc): ProductView {
     updatedAt: product.updatedAt.toISOString(),
     ownerPhone: product.ownerPhone,
     pickupAddress: product.pickupAddress,
+    ratingBoost: product.ratingBoost ?? 0,
+    priorityScore: product.priorityScore ?? product.ratingBoost ?? 0,
   };
 }
 

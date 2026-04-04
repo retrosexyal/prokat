@@ -25,6 +25,10 @@ export type ProductDoc = {
   updatedAt: Date;
   ownerPhone?: string;
   pickupAddress?: string;
+
+  // Платное продвижение
+  ratingBoost?: number;
+  priorityScore?: number;
 };
 
 export type ProductView = {
@@ -49,4 +53,7 @@ export type ProductView = {
   updatedAt: string;
   ownerPhone?: string;
   pickupAddress?: string;
+
+  ratingBoost?: number;
+  priorityScore?: number;
 };

@@ -11,6 +11,10 @@ export const API_ROUTES = {
   bookings: "/api/bookings",
   me: "/api/users/me",
   bookingById: (id: string) => `/api/bookings/${id}`,
+
+  monetizationRequests: "/api/monetization/requests",
+  adminMonetizationRequestById: (id: string) =>
+    `/api/admin/monetization-requests/${id}`,
 } as const;
 
 type ProductPathInput = {

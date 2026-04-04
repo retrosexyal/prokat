@@ -9,6 +9,7 @@ export type ApprovedProductWithAvailability = ProductDoc & {
   isAvailableNow: boolean;
   availableQuantityNow: number;
   cityPriority?: number;
+  priorityScore?: number;
 };
 
 function getTodayRange(): { startOfDay: Date; endOfDay: Date } {
@@ -83,84 +84,87 @@ export async function getApprovedProductsWithAvailability(
           cityPriority: {
             $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
           },
+          priorityScore: { $ifNull: ["$ratingBoost", 0] },
         },
       }
     : {
         $addFields: {
           cityPriority: 0,
+          priorityScore: { $ifNull: ["$ratingBoost", 0] },
         },
       };
 
   const result = await db
-  .collection<ProductDoc>(COLLECTION)
-  .aggregate([
-    { $match: matchStage },
-    cityPriorityStage,
-    {
-      $facet: {
-        items: [
-          {
-            $sort: {
-              cityPriority: 1,
-              createdAt: -1,
+    .collection<ProductDoc>(COLLECTION)
+    .aggregate([
+      { $match: matchStage },
+      cityPriorityStage,
+      {
+        $facet: {
+          items: [
+            {
+              $sort: {
+                cityPriority: 1,
+                priorityScore: -1,
+                createdAt: -1,
+              },
             },
-          },
-          { $skip: skip },
-          { $limit: limit },
-          {
-            $lookup: {
-              from: "bookings",
-              let: { productId: "$_id" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $eq: ["$productId", "$$productId"] },
-                        { $eq: ["$status", "confirmed"] },
-                        { $lte: ["$startDate", endOfDay] },
-                        { $gte: ["$endDate", startOfDay] },
-                      ],
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $lookup: {
+                from: "bookings",
+                let: { productId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ["$productId", "$$productId"] },
+                          { $eq: ["$status", "confirmed"] },
+                          { $lte: ["$startDate", endOfDay] },
+                          { $gte: ["$endDate", startOfDay] },
+                        ],
+                      },
                     },
                   },
-                },
-              ],
-              as: "activeBookingsToday",
-            },
-          },
-          {
-            $addFields: {
-              availableQuantityNow: {
-                $max: [
-                  0,
-                  {
-                    $subtract: [
-                      { $ifNull: ["$quantity", 1] },
-                      { $size: "$activeBookingsToday" },
-                    ],
-                  },
                 ],
+                as: "activeBookingsToday",
               },
             },
-          },
-          {
-            $addFields: {
-              isAvailableNow: {
-                $gt: ["$availableQuantityNow", 0],
+            {
+              $addFields: {
+                availableQuantityNow: {
+                  $max: [
+                    0,
+                    {
+                      $subtract: [
+                        { $ifNull: ["$quantity", 1] },
+                        { $size: "$activeBookingsToday" },
+                      ],
+                    },
+                  ],
+                },
               },
             },
-          },
-          {
-            $project: {
-              activeBookingsToday: 0,
+            {
+              $addFields: {
+                isAvailableNow: {
+                  $gt: ["$availableQuantityNow", 0],
+                },
+              },
             },
-          },
-        ],
-        totalCount: [{ $count: "count" }],
+            {
+              $project: {
+                activeBookingsToday: 0,
+              },
+            },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
       },
-    },
-  ])
-  .toArray();
+    ])
+    .toArray();
 
   const first = result[0];
   const products = (first?.items ?? []) as ApprovedProductWithAvailability[];
@@ -217,7 +221,7 @@ export async function getApprovedProducts(
   const pipeline = [
     { $match: matchStage },
     cityPriorityStage,
-    { $sort: { cityPriority: 1, createdAt: -1 } },
+    { $sort: { cityPriority: 1, priorityScore: -1, createdAt: -1 } },
     { $project: { cityPriority: 0 } },
     ...(limit > 0 ? [{ $limit: limit }] : []),
   ];

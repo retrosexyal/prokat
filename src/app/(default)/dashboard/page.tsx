@@ -15,6 +15,8 @@ import { getAllCategories } from "@/lib/categories";
 import { CategoryDoc } from "@/types/category";
 import { toCategoryView } from "@/lib/category-mappers";
 
+const FREE_PRODUCTS_LIMIT = 3;
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
   };
 
   let categories: CategoryDoc[] = [];
+  let productLimit = FREE_PRODUCTS_LIMIT;
 
   if (session?.user?.email) {
     const client = await clientPromise;
@@ -53,6 +56,7 @@ export default async function DashboardPage() {
         pickupAddress: user.pickupAddress ?? "",
       };
 
+      productLimit = user.productLimit ?? FREE_PRODUCTS_LIMIT;
       categories = await getAllCategories();
     }
   }
@@ -82,6 +86,7 @@ export default async function DashboardPage() {
         initialBookings={myBookings}
         initialPickupAddress={userProfile.pickupAddress}
         categories={categories.map((cat) => toCategoryView(cat))}
+        currentProductLimit={productLimit}
       />
     </div>
   );
