@@ -17,7 +17,10 @@ import { FileDropzone } from "@/components/ui/FileDropzone";
 import { Button } from "@/components/ui/Button";
 import { CategoryView } from "@/types/category";
 import { CITIES, getRealCityBySlug } from "@/lib/cities";
-import type { MonetizationRequestType } from "@/types/monetization";
+import type {
+  MonetizationRequestType,
+  MonetizationRequestView,
+} from "@/types/monetization";
 
 type Props = {
   initialProducts: ProductView[];
@@ -61,6 +64,77 @@ function getStatusLabel(status: ProductStatus): string {
   }
 }
 
+function renderInvoiceBox(
+  invoice: MonetizationRequestView,
+  options?: {
+    onHide?: () => void;
+    compact?: boolean;
+  },
+) {
+  return (
+    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+      <div className="font-medium">Счёт выставлен</div>
+
+      <div className="mt-1">
+        Сумма:{" "}
+        {typeof invoice.paymentAmountBYN === "number"
+          ? `${invoice.paymentAmountBYN.toFixed(2)} BYN`
+          : "—"}
+        {invoice.paymentInvoiceNo
+          ? ` · № счёта ${invoice.paymentInvoiceNo}`
+          : ""}
+      </div>
+
+      {invoice.paymentAccountNo ? (
+        <div className="mt-1">Лицевой счёт: {invoice.paymentAccountNo}</div>
+      ) : null}
+
+      <div className="mt-1">Статус: {invoice.paymentStatus}</div>
+
+      {invoice.paymentInvoiceUrl ? (
+        <div className="mt-1 break-all">
+          Ссылка:{" "}
+          <a
+            href={invoice.paymentInvoiceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            {invoice.paymentInvoiceUrl}
+          </a>
+        </div>
+      ) : null}
+
+      {invoice.paymentError ? (
+        <div className="mt-2 text-xs text-red-600">{invoice.paymentError}</div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {invoice.paymentInvoiceUrl ? (
+          <a
+            href={invoice.paymentInvoiceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-sky-600 px-4 py-2 text-sm font-medium text-white"
+          >
+            Открыть счёт
+          </a>
+        ) : null}
+
+        {options?.onHide ? (
+          <button
+            type="button"
+            className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium"
+            onClick={options.onHide}
+          >
+            Скрыть
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function UserProductForm({
   initialProducts,
   initialBookings,
@@ -98,10 +172,79 @@ export function UserProductForm({
   const [requestedLimitIncrease, setRequestedLimitIncrease] = useState(1);
   const [requestedBoostValue, setRequestedBoostValue] = useState(1);
   const [monetizationLoading, setMonetizationLoading] = useState(false);
-  const [monetizationSuccess, setMonetizationSuccess] = useState("");
+  const [monetizationSuccess, setMonetizationSuccess] = useState<string>("");
+  const [monetizationInvoice, setMonetizationInvoice] =
+    useState<MonetizationRequestView | null>(null);
+  const [activeLimitInvoice, setActiveLimitInvoice] =
+    useState<MonetizationRequestView | null>(null);
+
+  const [activeBoostInvoices, setActiveBoostInvoices] = useState<
+    Record<string, MonetizationRequestView>
+  >({});
 
   const totalImagesCount = existingImages.length + imageFiles.length;
   const isEditing = editingProductId !== null;
+
+  function storeActiveInvoice(invoice: MonetizationRequestView): void {
+    if (invoice.type === "increase_limit") {
+      setActiveLimitInvoice(invoice);
+      return;
+    }
+
+    if (invoice.type === "boost_product" && invoice.productId) {
+      setActiveBoostInvoices((prev) => ({
+        ...prev,
+        [invoice.productId as string]: invoice,
+      }));
+    }
+  }
+
+  function removeActiveInvoice(invoice: MonetizationRequestView | null): void {
+    if (!invoice) {
+      return;
+    }
+
+    if (invoice.type === "increase_limit") {
+      setActiveLimitInvoice(null);
+      return;
+    }
+
+    if (invoice.type === "boost_product" && invoice.productId) {
+      setActiveBoostInvoices((prev) => {
+        const next = { ...prev };
+        delete next[invoice.productId as string];
+        return next;
+      });
+    }
+  }
+
+  async function handleMonetizationSubmit(): Promise<void> {
+    setError("");
+    setMonetizationSuccess("");
+    setMonetizationInvoice(null);
+    setMonetizationLoading(true);
+
+    try {
+      const response = await api.post<MonetizationRequestView>(
+        API_ROUTES.monetizationRequests,
+        {
+          type: monetizationModal.type,
+          productId: monetizationModal.product?._id,
+          requestedLimitIncrease,
+          requestedBoostValue,
+          message: monetizationMessage,
+        },
+      );
+
+      setMonetizationInvoice(response.data);
+      storeActiveInvoice(response.data);
+      setMonetizationSuccess("Счёт создан. Данные для оплаты показаны ниже.");
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Ошибка отправки заявки"));
+    } finally {
+      setMonetizationLoading(false);
+    }
+  }
 
   const submitButtonLabel = useMemo(() => {
     if (loading && isEditing) {
@@ -327,6 +470,9 @@ export function UserProductForm({
     setMonetizationMessage(
       `Хочу поднять товар "${product.name}" выше в каталоге.`,
     );
+    setMonetizationInvoice(
+      product._id ? (activeBoostInvoices[product._id] ?? null) : null,
+    );
     setMonetizationModal({
       open: true,
       type: "boost_product",
@@ -341,6 +487,7 @@ export function UserProductForm({
     setMonetizationMessage(
       "Хочу увеличить лимит на размещение товаров в кабинете.",
     );
+    setMonetizationInvoice(activeLimitInvoice);
     setMonetizationModal({
       open: true,
       type: "increase_limit",
@@ -358,36 +505,6 @@ export function UserProductForm({
       open: false,
       product: null,
     }));
-  }
-
-  async function handleMonetizationSubmit(): Promise<void> {
-    setError("");
-    setMonetizationSuccess("");
-    setMonetizationLoading(true);
-
-    try {
-      await api.post(API_ROUTES.monetizationRequests, {
-        type: monetizationModal.type,
-        productId: monetizationModal.product?._id,
-        requestedLimitIncrease,
-        requestedBoostValue,
-        message: monetizationMessage,
-      });
-
-      setMonetizationSuccess(
-        "Заявка отправлена администратору. Сейчас используется заглушка оплаты через ЕРИП/EPOS.",
-      );
-
-      setMonetizationModal({
-        open: false,
-        type: "boost_product",
-        product: null,
-      });
-    } catch (error: unknown) {
-      setError(getApiErrorMessage(error, "Ошибка отправки заявки"));
-    } finally {
-      setMonetizationLoading(false);
-    }
   }
 
   async function handleBookingStatusChange(
@@ -719,10 +836,18 @@ export function UserProductForm({
           ) : null}
 
           <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
-            Пока здесь подключена заглушка: пользователь оставляет заявку,
-            администратор подтверждает услугу, а позже сюда можно подключить
-            реальный EPOS/ЕРИП-инвойс.
+            После создания услуги формируется реальный счёт Express-Pay. После
+            оплаты администратор сможет завершить применение услуги в панели
+            управления.
           </div>
+
+          {activeLimitInvoice ? (
+            <div className="mt-4">
+              {renderInvoiceBox(activeLimitInvoice, {
+                onHide: () => setActiveLimitInvoice(null),
+              })}
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-3">
@@ -735,6 +860,10 @@ export function UserProductForm({
               {products.map((product) => {
                 const productId = product._id;
                 const images = product.images;
+
+                const activeBoostInvoice = productId
+                  ? activeBoostInvoices[productId]
+                  : null;
 
                 return (
                   <div
@@ -776,6 +905,21 @@ export function UserProductForm({
                         {product.quantity ?? 1} · Рейтинг:{" "}
                         {product.ratingBoost ?? 0}
                       </div>
+                      {activeBoostInvoice ? (
+                        <div className="mt-1">
+                          {renderInvoiceBox(activeBoostInvoice, {
+                            onHide: () => {
+                              if (productId) {
+                                setActiveBoostInvoices((prev) => {
+                                  const next = { ...prev };
+                                  delete next[productId];
+                                  return next;
+                                });
+                              }
+                            },
+                          })}
+                        </div>
+                      ) : null}
 
                       {productId ? (
                         <div className="flex flex-col gap-2 sm:flex-row">
@@ -907,8 +1051,8 @@ export function UserProductForm({
               </>
             ) : (
               <>
-                Отправь заявку администратору на увеличение лимита товаров. Пока
-                оплата работает через заглушку под ЕРИП/EPOS.
+                Отправь заявку на увеличение лимита товаров. После отправки
+                система сразу сформирует счёт через Express-Pay / ЕРИП.
               </>
             )}
           </div>
@@ -957,9 +1101,81 @@ export function UserProductForm({
           </label>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Следующий шаг для тебя: после создания заявки вместо этой заглушки
-            можно подключить создание реального платежа через ЕРИП/EPOS.
+            После отправки система сразу создаст счёт в Express-Pay. Сама услуга
+            применяется после подтверждения факта оплаты в административной
+            панели.
           </div>
+          {monetizationInvoice ? (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 space-y-2">
+              <div className="font-semibold">Счёт создан</div>
+
+              <div>
+                Сумма:{" "}
+                {typeof monetizationInvoice.paymentAmountBYN === "number"
+                  ? `${monetizationInvoice.paymentAmountBYN.toFixed(2)} BYN`
+                  : "—"}
+              </div>
+
+              <div>
+                Номер счёта: {monetizationInvoice.paymentInvoiceNo ?? "—"}
+              </div>
+
+              <div>
+                Лицевой счёт: {monetizationInvoice.paymentAccountNo ?? "—"}
+              </div>
+
+              <div>Статус: {monetizationInvoice.paymentStatus}</div>
+
+              {monetizationInvoice.paymentInvoiceUrl ? (
+                <div className="break-all">
+                  Ссылка на оплату:{" "}
+                  <a
+                    href={monetizationInvoice.paymentInvoiceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {monetizationInvoice.paymentInvoiceUrl}
+                  </a>
+                </div>
+              ) : null}
+
+              <div className="text-xs text-sky-800/80">
+                В тестовом sandbox у Express-Pay публичная ссылка может
+                открываться некорректно. Для проверки интеграции ориентируйся в
+                первую очередь на номер счёта и статус счёта.
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {monetizationInvoice.paymentInvoiceUrl ? (
+                  <a
+                    href={monetizationInvoice.paymentInvoiceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full bg-sky-600 px-4 py-2 text-sm font-medium text-white"
+                  >
+                    Открыть счёт
+                  </a>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium"
+                  onClick={() => {
+                    setMonetizationModal({
+                      open: false,
+                      type: "boost_product",
+                      product: null,
+                    });
+                    setMonetizationInvoice(null);
+                    setMonetizationSuccess("");
+                  }}
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             <Button

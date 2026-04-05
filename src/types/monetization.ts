@@ -8,6 +8,11 @@ export type MonetizationRequestStatus =
   | "cancelled";
 
 export type PaymentProvider = "erip";
+export type MonetizationPaymentStatus =
+  | "pending"
+  | "invoice_created"
+  | "paid"
+  | "failed";
 
 export type MonetizationRequestDoc = {
   _id?: ObjectId;
@@ -24,8 +29,15 @@ export type MonetizationRequestDoc = {
   requestedBoostValue?: number;
 
   paymentProvider: PaymentProvider;
-  paymentStatus: "pending" | "stub";
+  paymentStatus: MonetizationPaymentStatus;
   paymentStubNote?: string;
+  paymentAmountBYN?: number;
+  paymentAccountNo?: string;
+  paymentInvoiceNo?: number;
+  paymentInvoiceUrl?: string;
+  paymentCurrency?: number;
+  paymentExpiresAt?: Date;
+  paymentError?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -48,8 +60,15 @@ export type MonetizationRequestView = {
   requestedBoostValue?: number;
 
   paymentProvider: PaymentProvider;
-  paymentStatus: "pending" | "stub";
+  paymentStatus: MonetizationPaymentStatus;
   paymentStubNote?: string;
+  paymentAmountBYN?: number;
+  paymentAccountNo?: string;
+  paymentInvoiceNo?: number;
+  paymentInvoiceUrl?: string;
+  paymentCurrency?: number;
+  paymentExpiresAt?: string;
+  paymentError?: string;
 
   createdAt: string;
   updatedAt: string;

@@ -3,8 +3,15 @@ import { getServerSession } from "next-auth/next";
 import { ObjectId } from "mongodb";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
-import { createMonetizationRequest } from "@/lib/monetization-requests";
+import {
+  createMonetizationRequest,
+  updateMonetizationRequestPayment,
+} from "@/lib/monetization-requests";
 import { toMonetizationRequestView } from "@/lib/monetization-mappers";
+import {
+  createExpressPayInvoice,
+  getMonetizationPricing,
+} from "@/lib/express-pay";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { MonetizationRequestType } from "@/types/monetization";
@@ -13,6 +20,19 @@ const ALLOWED_TYPES: MonetizationRequestType[] = [
   "increase_limit",
   "boost_product",
 ];
+const PAYMENT_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function buildAccountNo(
+  requestId: string,
+  type: MonetizationRequestType,
+): string {
+  const prefix = type === "boost_product" ? "BOOST" : "LIMIT";
+  return `${prefix}-${requestId.slice(-18)}`.slice(0, 30);
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -87,6 +107,19 @@ export async function POST(request: Request) {
     );
   }
 
+  const pricing = getMonetizationPricing();
+  const paymentAmountBYN =
+    type === "increase_limit"
+      ? roundMoney(requestedLimitIncrease * pricing.limitPricePerItemBYN)
+      : roundMoney(requestedBoostValue * pricing.boostPricePerPointBYN);
+
+  if (!Number.isFinite(paymentAmountBYN) || paymentAmountBYN <= 0) {
+    return NextResponse.json(
+      { error: "Не удалось рассчитать стоимость услуги" },
+      { status: 500 },
+    );
+  }
+
   const created = await createMonetizationRequest({
     userId: user._id as ObjectId,
     userEmail: session.user.email,
@@ -100,12 +133,65 @@ export async function POST(request: Request) {
     requestedBoostValue:
       type === "boost_product" ? requestedBoostValue : undefined,
     paymentProvider: "erip",
-    paymentStatus: "stub",
-    paymentStubNote:
-      "Заглушка оплаты ЕРИП: после подтверждения администратором здесь можно будет создать реальный EPOS/ЕРИП счёт.",
+    paymentStatus: "pending",
+    paymentAmountBYN,
+    paymentCurrency: 933,
   });
 
-  return NextResponse.json(toMonetizationRequestView(created), {
-    status: 201,
-  });
+  const accountNo = buildAccountNo(String(created._id), type);
+  const info =
+    type === "increase_limit"
+      ? `Увеличение лимита объявлений на ${requestedLimitIncrease}`
+      : `Повышение рейтинга товара ${product?.name ?? ""} на ${requestedBoostValue}`.trim();
+
+  const paymentExpiresAt = new Date(Date.now() + PAYMENT_LIFETIME_MS);
+
+  try {
+    const invoice = await createExpressPayInvoice({
+      accountNo,
+      amount: paymentAmountBYN,
+      info,
+      emailNotification: session.user.email,
+      returnInvoiceUrl: 1,
+      expiration: paymentExpiresAt,
+    });
+
+    const updated = await updateMonetizationRequestPayment(
+      String(created._id),
+      {
+        paymentStatus: "invoice_created",
+        paymentAccountNo: accountNo,
+        paymentInvoiceNo: invoice.InvoiceNo,
+        paymentInvoiceUrl: invoice.InvoiceUrl,
+        paymentExpiresAt,
+        paymentError: undefined,
+        paymentStubNote: undefined,
+      },
+    );
+
+    return NextResponse.json(toMonetizationRequestView(updated ?? created), {
+      status: 201,
+    });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Не удалось создать счёт";
+
+    const updated = await updateMonetizationRequestPayment(
+      String(created._id),
+      {
+        paymentStatus: "failed",
+        paymentAccountNo: accountNo,
+        paymentExpiresAt,
+        paymentError: errorMessage,
+      },
+    );
+
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        request: toMonetizationRequestView(updated ?? created),
+      },
+      { status: 502 },
+    );
+  }
 }

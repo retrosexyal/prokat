@@ -4,7 +4,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { isAdminEmail } from "@/lib/auth";
-import { updateMonetizationRequestStatus } from "@/lib/monetization-requests";
+import {
+  updateMonetizationRequestPayment,
+  updateMonetizationRequestStatus,
+} from "@/lib/monetization-requests";
 import { toMonetizationRequestView } from "@/lib/monetization-mappers";
 import type { MonetizationRequestStatus } from "@/types/monetization";
 import type { UserType } from "@/types";
@@ -77,6 +80,19 @@ export async function PATCH(request: Request, context: RouteContext) {
         },
       );
     }
+  }
+
+  if (status === "paid" || status === "completed") {
+    await updateMonetizationRequestPayment(id, {
+      paymentStatus: "paid",
+      paymentError: undefined,
+    });
+  }
+
+  if (status === "cancelled") {
+    await updateMonetizationRequestPayment(id, {
+      paymentStatus: "failed",
+    });
   }
 
   const processedByEmail =

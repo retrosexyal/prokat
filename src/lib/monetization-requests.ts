@@ -75,3 +75,26 @@ export async function updateMonetizationRequestStatus(
 
   return updated ?? null;
 }
+
+export async function updateMonetizationRequestPayment(
+  id: string,
+  payment: Partial<MonetizationRequestDoc>,
+): Promise<MonetizationRequestDoc | null> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  const updated = await db
+    .collection<MonetizationRequestDoc>(COLLECTION)
+    .findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...payment,
+          updatedAt: new Date(),
+        },
+      },
+      { returnDocument: "after" },
+    );
+
+  return updated ?? null;
+}

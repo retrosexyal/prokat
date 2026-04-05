@@ -110,10 +110,33 @@ export function AdminMonetizationRequests({
                   {request.message ? (
                     <div>Комментарий: {request.message}</div>
                   ) : null}
-                  <div>Оплата: ЕРИП / {request.paymentStatus}</div>
-                  <div className="text-xs text-zinc-500">
-                    {request.paymentStubNote}
+                  <div>
+                    Оплата: ЕРИП / {request.paymentStatus}
+                    {typeof request.paymentAmountBYN === "number"
+                      ? ` / ${request.paymentAmountBYN.toFixed(2)} BYN`
+                      : ""}
                   </div>
+                  {request.paymentInvoiceNo ? (
+                    <div>Номер счёта: {request.paymentInvoiceNo}</div>
+                  ) : null}
+                  {request.paymentInvoiceUrl ? (
+                    <div className="break-all">
+                      Ссылка на счёт:{" "}
+                      <a
+                        href={request.paymentInvoiceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2"
+                      >
+                        {request.paymentInvoiceUrl}
+                      </a>
+                    </div>
+                  ) : null}
+                  {request.paymentError ? (
+                    <div className="text-xs text-red-600">
+                      {request.paymentError}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="text-sm text-zinc-500">
