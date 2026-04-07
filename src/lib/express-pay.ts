@@ -22,6 +22,15 @@ export type ExpressPayInvoiceResponse = {
   };
 };
 
+export type ExpressPayInvoiceQrResponse = {
+  QrCodeBody?: string;
+  Error?: {
+    Code?: number;
+    Msg?: string;
+    MsgCode?: number;
+  };
+};
+
 export type MonetizationPricing = {
   limitPricePerItemBYN: number;
   boostPricePerPointBYN: number;
@@ -92,7 +101,7 @@ function formatExpiration(date: Date): string {
   ].join("");
 }
 
-function computeSignature(
+function computeInvoiceSignature(
   params: Record<string, string>,
   secretWord: string,
 ): string {
@@ -116,6 +125,27 @@ function computeSignature(
     "IsAmountEditable",
     "EmailNotification",
     "ReturnInvoiceUrl",
+  ] as const;
+
+  const raw = mapping.map((key) => params[key] ?? "").join("");
+
+  return crypto
+    .createHmac("sha1", Buffer.from(secretWord, "utf8"))
+    .update(Buffer.from(raw, "utf8"))
+    .digest("hex")
+    .toUpperCase();
+}
+
+function computeQrSignature(
+  params: Record<string, string>,
+  secretWord: string,
+): string {
+  const mapping = [
+    "Token",
+    "InvoiceId",
+    "ViewType",
+    "ImageWidth",
+    "ImageHeight",
   ] as const;
 
   const raw = mapping.map((key) => params[key] ?? "").join("");
@@ -151,7 +181,7 @@ export async function createExpressPayInvoice(
   };
 
   if (secretWord) {
-    params.signature = computeSignature(params, secretWord);
+    params.signature = computeInvoiceSignature(params, secretWord);
   }
 
   const url = `${getExpressPayBaseUrl()}/invoices?token=${encodeURIComponent(token)}`;
@@ -171,6 +201,61 @@ export async function createExpressPayInvoice(
 
   try {
     json = JSON.parse(text) as ExpressPayInvoiceResponse;
+  } catch {
+    throw new Error(`Express-Pay вернул неожиданный ответ: ${text}`);
+  }
+
+  if (!response.ok) {
+    const message = json?.Error?.Msg || `HTTP ${response.status}`;
+    throw new Error(`Ошибка Express-Pay: ${message}`);
+  }
+
+  if (json?.Error) {
+    throw new Error(
+      `Ошибка Express-Pay: ${json.Error.Msg ?? "неизвестная ошибка"}`,
+    );
+  }
+
+  return json ?? {};
+}
+
+export async function getExpressPayInvoiceQrCode(
+  invoiceId: number,
+  options?: {
+    imageWidth?: number;
+    imageHeight?: number;
+  },
+): Promise<ExpressPayInvoiceQrResponse> {
+  const { token, secretWord } = ensureExpressPayConfigured();
+
+  const params: Record<string, string> = {
+    Token: token,
+    InvoiceId: String(invoiceId),
+    ViewType: "base64",
+    ImageWidth: String(options?.imageWidth ?? 280),
+    ImageHeight: String(options?.imageHeight ?? 280),
+  };
+
+  if (secretWord) {
+    params.signature = computeQrSignature(params, secretWord);
+  }
+
+  const url = `${getExpressPayBaseUrl()}/qrcode/getqrcode/?${new URLSearchParams({
+    token,
+    ...params,
+  }).toString()}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+
+  let json: ExpressPayInvoiceQrResponse | null = null;
+
+  try {
+    json = JSON.parse(text) as ExpressPayInvoiceQrResponse;
   } catch {
     throw new Error(`Express-Pay вернул неожиданный ответ: ${text}`);
   }

@@ -1,20 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { ObjectId } from "mongodb";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import {
   createMonetizationRequest,
+  getMonetizationRequestsForUser,
   updateMonetizationRequestPayment,
 } from "@/lib/monetization-requests";
-import { toMonetizationRequestView } from "@/lib/monetization-mappers";
+import {
+  toMonetizationRequestView,
+  toMonetizationRequestViews,
+} from "@/lib/monetization-mappers";
 import {
   createExpressPayInvoice,
+  getExpressPayInvoiceStatus,
   getMonetizationPricing,
 } from "@/lib/express-pay";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
-import type { MonetizationRequestType } from "@/types/monetization";
+import type {
+  MonetizationRequestDoc,
+  MonetizationRequestType,
+} from "@/types/monetization";
 
 const ALLOWED_TYPES: MonetizationRequestType[] = [
   "increase_limit",
@@ -32,6 +40,126 @@ function buildAccountNo(
 ): string {
   const prefix = type === "boost_product" ? "BOOST" : "LIMIT";
   return `${prefix}-${requestId.slice(-18)}`.slice(0, 30);
+}
+
+function mapProviderStatusToPatch(
+  requestDoc: MonetizationRequestDoc,
+  providerStatus?: number,
+): Partial<MonetizationRequestDoc> | null {
+  switch (providerStatus) {
+    case 1:
+      return {
+        paymentStatus: "invoice_created",
+        paymentError: undefined,
+      };
+
+    case 3:
+    case 6:
+      return {
+        paymentStatus: "paid",
+        paymentError: undefined,
+        status: requestDoc.status === "completed" ? "completed" : "paid",
+        processedAt: requestDoc.processedAt ?? new Date(),
+      };
+
+    case 2:
+      return {
+        paymentStatus: "failed",
+        paymentError: "Срок действия счёта истёк",
+      };
+
+    case 4:
+      return {
+        paymentStatus: "failed",
+        paymentError: "Счёт оплачен частично",
+      };
+
+    case 5:
+      return {
+        paymentStatus: "failed",
+        paymentError: "Счёт отменён",
+      };
+
+    case 7:
+      return {
+        paymentStatus: "failed",
+        paymentError: "Платёж был возвращён",
+      };
+
+    default:
+      return null;
+  }
+}
+
+async function syncRequestPaymentState(
+  requestDoc: MonetizationRequestDoc,
+): Promise<MonetizationRequestDoc> {
+  if (
+    !requestDoc._id ||
+    !requestDoc.paymentInvoiceNo ||
+    !["pending", "invoice_created"].includes(requestDoc.paymentStatus)
+  ) {
+    return requestDoc;
+  }
+
+  try {
+    const providerState = await getExpressPayInvoiceStatus(
+      Number(requestDoc.paymentInvoiceNo),
+    );
+
+    const patch = mapProviderStatusToPatch(requestDoc, providerState.Status);
+
+    if (!patch) {
+      return requestDoc;
+    }
+
+    const hasChanges = Object.entries(patch).some(([key, value]) => {
+      const currentValue = requestDoc[key as keyof MonetizationRequestDoc];
+      return currentValue !== value;
+    });
+
+    if (!hasChanges) {
+      return requestDoc;
+    }
+
+    const updated = await updateMonetizationRequestPayment(
+      String(requestDoc._id),
+      patch,
+    );
+
+    return updated ?? requestDoc;
+  } catch {
+    return requestDoc;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const onlyActive = request.nextUrl.searchParams.get("onlyActive") === "1";
+
+  const client = await clientPromise;
+  const db = client.db();
+
+  const user = await db.collection<UserType>("users").findOne({
+    email: session.user.email,
+  });
+
+  if (!user?._id) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const requests = await getMonetizationRequestsForUser(user._id, {
+    onlyActive,
+  });
+
+  const synced = await Promise.all(requests.map(syncRequestPaymentState));
+
+  return NextResponse.json(toMonetizationRequestViews(synced));
 }
 
 export async function POST(request: Request) {

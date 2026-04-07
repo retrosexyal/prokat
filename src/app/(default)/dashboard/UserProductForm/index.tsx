@@ -28,6 +28,7 @@ type Props = {
   initialPickupAddress?: string;
   categories: CategoryView[];
   currentProductLimit: number;
+  initialMonetizationRequests: MonetizationRequestView[];
 };
 
 type ExistingImage = {
@@ -64,13 +65,125 @@ function getStatusLabel(status: ProductStatus): string {
   }
 }
 
-function renderInvoiceBox(
-  invoice: MonetizationRequestView,
-  options?: {
-    onHide?: () => void;
-    compact?: boolean;
-  },
-) {
+type MonetizationQrResponse = {
+  qrCodeBody?: string;
+};
+
+function isActiveInvoice(request: MonetizationRequestView): boolean {
+  if (!request._id) {
+    return false;
+  }
+
+  if (!request.paymentInvoiceNo && !request.paymentInvoiceUrl) {
+    return false;
+  }
+
+  if (
+    request.status === "completed" ||
+    request.status === "cancelled" ||
+    request.paymentStatus === "paid" ||
+    request.paymentStatus === "failed"
+  ) {
+    return false;
+  }
+
+  if (request.paymentExpiresAt) {
+    const expiresAt = new Date(request.paymentExpiresAt).getTime();
+
+    if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+      return false;
+    }
+  }
+
+  return (
+    request.paymentStatus === "pending" ||
+    request.paymentStatus === "invoice_created"
+  );
+}
+
+function buildInvoiceState(requests: MonetizationRequestView[]): {
+  activeLimitInvoice: MonetizationRequestView | null;
+  activeBoostInvoices: Record<string, MonetizationRequestView>;
+} {
+  let activeLimitInvoice: MonetizationRequestView | null = null;
+  const activeBoostInvoices: Record<string, MonetizationRequestView> = {};
+
+  for (const request of requests) {
+    if (!isActiveInvoice(request)) {
+      continue;
+    }
+
+    if (request.type === "increase_limit" && !activeLimitInvoice) {
+      activeLimitInvoice = request;
+      continue;
+    }
+
+    if (
+      request.type === "boost_product" &&
+      request.productId &&
+      !activeBoostInvoices[request.productId]
+    ) {
+      activeBoostInvoices[request.productId] = request;
+    }
+  }
+
+  return {
+    activeLimitInvoice,
+    activeBoostInvoices,
+  };
+}
+
+function formatInvoiceDate(value?: string): string {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString("ru-RU");
+}
+
+function InvoiceBox({
+  invoice,
+  onHide,
+}: {
+  invoice: MonetizationRequestView;
+  onHide?: () => void;
+}) {
+  const [qrCodeBody, setQrCodeBody] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+
+  async function handleLoadQr(): Promise<void> {
+    if (!invoice._id || qrLoading || qrCodeBody) {
+      return;
+    }
+
+    setQrLoading(true);
+    setQrError("");
+
+    try {
+      const response = await api.get<MonetizationQrResponse>(
+        API_ROUTES.monetizationRequestQr(invoice._id),
+      );
+
+      if (!response.data.qrCodeBody) {
+        setQrError("QR-код не был возвращён платёжным провайдером.");
+        return;
+      }
+
+      setQrCodeBody(response.data.qrCodeBody);
+    } catch (error: unknown) {
+      setQrError(getApiErrorMessage(error, "Не удалось получить QR-код"));
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
       <div className="font-medium">Счёт выставлен</div>
@@ -91,6 +204,12 @@ function renderInvoiceBox(
 
       <div className="mt-1">Статус: {invoice.paymentStatus}</div>
 
+      {invoice.paymentExpiresAt ? (
+        <div className="mt-1">
+          Действует до: {formatInvoiceDate(invoice.paymentExpiresAt)}
+        </div>
+      ) : null}
+
       {invoice.paymentInvoiceUrl ? (
         <div className="mt-1 break-all">
           Ссылка:{" "}
@@ -109,6 +228,24 @@ function renderInvoiceBox(
         <div className="mt-2 text-xs text-red-600">{invoice.paymentError}</div>
       ) : null}
 
+      {qrCodeBody ? (
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-sky-800/80">
+            QR для оплаты
+          </div>
+
+          <img
+            src={`data:image/png;base64,${qrCodeBody}`}
+            alt={`QR-код для оплаты счёта ${invoice.paymentInvoiceNo ?? ""}`}
+            className="h-48 w-48 rounded-lg border border-sky-200 bg-white p-2"
+          />
+        </div>
+      ) : null}
+
+      {qrError ? (
+        <div className="mt-2 text-xs text-red-600">{qrError}</div>
+      ) : null}
+
       <div className="mt-3 flex flex-wrap gap-2">
         {invoice.paymentInvoiceUrl ? (
           <a
@@ -121,11 +258,22 @@ function renderInvoiceBox(
           </a>
         ) : null}
 
-        {options?.onHide ? (
+        {invoice._id ? (
+          <button
+            type="button"
+            onClick={handleLoadQr}
+            disabled={qrLoading}
+            className="rounded-full border border-sky-300 px-4 py-2 text-sm font-medium disabled:opacity-60"
+          >
+            {qrLoading ? "Загрузка QR..." : "Показать QR"}
+          </button>
+        ) : null}
+
+        {onHide ? (
           <button
             type="button"
             className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium"
-            onClick={options.onHide}
+            onClick={onHide}
           >
             Скрыть
           </button>
@@ -141,6 +289,7 @@ export function UserProductForm({
   initialPickupAddress = "",
   categories,
   currentProductLimit,
+  initialMonetizationRequests,
 }: Props) {
   const router = useRouter();
 
@@ -175,15 +324,23 @@ export function UserProductForm({
   const [monetizationSuccess, setMonetizationSuccess] = useState<string>("");
   const [monetizationInvoice, setMonetizationInvoice] =
     useState<MonetizationRequestView | null>(null);
-  const [activeLimitInvoice, setActiveLimitInvoice] =
-    useState<MonetizationRequestView | null>(null);
-
-  const [activeBoostInvoices, setActiveBoostInvoices] = useState<
-    Record<string, MonetizationRequestView>
-  >({});
 
   const totalImagesCount = existingImages.length + imageFiles.length;
   const isEditing = editingProductId !== null;
+
+  const initialInvoiceState = useMemo(
+    () => buildInvoiceState(initialMonetizationRequests),
+    [initialMonetizationRequests],
+  );
+
+  const [activeLimitInvoice, setActiveLimitInvoice] =
+    useState<MonetizationRequestView | null>(
+      initialInvoiceState.activeLimitInvoice,
+    );
+
+  const [activeBoostInvoices, setActiveBoostInvoices] = useState<
+    Record<string, MonetizationRequestView>
+  >(initialInvoiceState.activeBoostInvoices);
 
   function storeActiveInvoice(invoice: MonetizationRequestView): void {
     if (invoice.type === "increase_limit") {
@@ -263,6 +420,40 @@ export function UserProductForm({
   useEffect(() => {
     setBookings(initialBookings);
   }, [initialBookings]);
+
+  useEffect(() => {
+    setActiveLimitInvoice(initialInvoiceState.activeLimitInvoice);
+    setActiveBoostInvoices(initialInvoiceState.activeBoostInvoices);
+  }, [initialInvoiceState]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshInvoices(): Promise<void> {
+      try {
+        const response = await api.get<MonetizationRequestView[]>(
+          `${API_ROUTES.monetizationRequests}?onlyActive=1`,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextState = buildInvoiceState(response.data);
+        setActiveLimitInvoice(nextState.activeLimitInvoice);
+        setActiveBoostInvoices(nextState.activeBoostInvoices);
+      } catch {
+        // здесь намеренно молча: дашборд продолжит работать даже если
+        // синхронизация счетов временно недоступна
+      }
+    }
+
+    refreshInvoices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (imageFiles.length === 0) {
@@ -843,9 +1034,10 @@ export function UserProductForm({
 
           {activeLimitInvoice ? (
             <div className="mt-4">
-              {renderInvoiceBox(activeLimitInvoice, {
-                onHide: () => setActiveLimitInvoice(null),
-              })}
+              <InvoiceBox
+                invoice={activeLimitInvoice}
+                onHide={() => setActiveLimitInvoice(null)}
+              />
             </div>
           ) : null}
         </section>
@@ -907,8 +1099,9 @@ export function UserProductForm({
                       </div>
                       {activeBoostInvoice ? (
                         <div className="mt-1">
-                          {renderInvoiceBox(activeBoostInvoice, {
-                            onHide: () => {
+                          <InvoiceBox
+                            invoice={activeBoostInvoice}
+                            onHide={() => {
                               if (productId) {
                                 setActiveBoostInvoices((prev) => {
                                   const next = { ...prev };
@@ -916,8 +1109,8 @@ export function UserProductForm({
                                   return next;
                                 });
                               }
-                            },
-                          })}
+                            }}
+                          />
                         </div>
                       ) : null}
 
@@ -1106,75 +1299,18 @@ export function UserProductForm({
             панели.
           </div>
           {monetizationInvoice ? (
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 space-y-2">
-              <div className="font-semibold">Счёт создан</div>
-
-              <div>
-                Сумма:{" "}
-                {typeof monetizationInvoice.paymentAmountBYN === "number"
-                  ? `${monetizationInvoice.paymentAmountBYN.toFixed(2)} BYN`
-                  : "—"}
-              </div>
-
-              <div>
-                Номер счёта: {monetizationInvoice.paymentInvoiceNo ?? "—"}
-              </div>
-
-              <div>
-                Лицевой счёт: {monetizationInvoice.paymentAccountNo ?? "—"}
-              </div>
-
-              <div>Статус: {monetizationInvoice.paymentStatus}</div>
-
-              {monetizationInvoice.paymentInvoiceUrl ? (
-                <div className="break-all">
-                  Ссылка на оплату:{" "}
-                  <a
-                    href={monetizationInvoice.paymentInvoiceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    {monetizationInvoice.paymentInvoiceUrl}
-                  </a>
-                </div>
-              ) : null}
-
-              <div className="text-xs text-sky-800/80">
-                В тестовом sandbox у Express-Pay публичная ссылка может
-                открываться некорректно. Для проверки интеграции ориентируйся в
-                первую очередь на номер счёта и статус счёта.
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-2">
-                {monetizationInvoice.paymentInvoiceUrl ? (
-                  <a
-                    href={monetizationInvoice.paymentInvoiceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full bg-sky-600 px-4 py-2 text-sm font-medium text-white"
-                  >
-                    Открыть счёт
-                  </a>
-                ) : null}
-
-                <button
-                  type="button"
-                  className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium"
-                  onClick={() => {
-                    setMonetizationModal({
-                      open: false,
-                      type: "boost_product",
-                      product: null,
-                    });
-                    setMonetizationInvoice(null);
-                    setMonetizationSuccess("");
-                  }}
-                >
-                  Закрыть
-                </button>
-              </div>
-            </div>
+            <InvoiceBox
+              invoice={monetizationInvoice}
+              onHide={() => {
+                setMonetizationModal({
+                  open: false,
+                  type: "boost_product",
+                  product: null,
+                });
+                setMonetizationInvoice(null);
+                setMonetizationSuccess("");
+              }}
+            />
           ) : null}
 
           <div className="flex flex-wrap gap-2">

@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { Filter, ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 import type {
   MonetizationRequestDoc,
@@ -30,16 +30,55 @@ export async function createMonetizationRequest(
   };
 }
 
-export async function getMonetizationRequestsForAdmin(): Promise<
-  MonetizationRequestDoc[]
-> {
+export async function getMonetizationRequestsForAdmin(
+  options?: {
+    includeProcessed?: boolean;
+  },
+): Promise<MonetizationRequestDoc[]> {
   const client = await clientPromise;
   const db = client.db();
 
+  const query: Filter<MonetizationRequestDoc> = options?.includeProcessed
+    ? {}
+    : {
+        status: {
+          $nin: ["completed", "cancelled"],
+        },
+      };
+
   return db
     .collection<MonetizationRequestDoc>(COLLECTION)
-    .find({})
-    .sort({ status: 1, createdAt: -1 })
+    .find(query)
+    .sort({ createdAt: -1 })
+    .toArray();
+}
+
+export async function getMonetizationRequestsForUser(
+  userId: string | ObjectId,
+  options?: {
+    onlyActive?: boolean;
+  },
+): Promise<MonetizationRequestDoc[]> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  const normalizedUserId =
+    typeof userId === "string" ? new ObjectId(userId) : userId;
+
+  const query: Filter<MonetizationRequestDoc> = {
+    userId: normalizedUserId,
+  };
+
+  if (options?.onlyActive) {
+    query.paymentStatus = {
+      $in: ["pending", "invoice_created"],
+    };
+  }
+
+  return db
+    .collection<MonetizationRequestDoc>(COLLECTION)
+    .find(query)
+    .sort({ createdAt: -1 })
     .toArray();
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
@@ -25,6 +25,55 @@ function getTypeLabel(type: MonetizationRequestView["type"]): string {
     : "Увеличить лимит";
 }
 
+function getPaymentStatusLabel(
+  request: MonetizationRequestView,
+): {
+  text: string;
+  tone: "default" | "success" | "warning" | "danger";
+} {
+  if (request.paymentStatus === "paid") {
+    return {
+      text: "оплачено",
+      tone: "success",
+    };
+  }
+
+  if (request.paymentStatus === "failed") {
+    if (
+      request.paymentError?.toLowerCase().includes("истёк") ||
+      request.paymentError?.toLowerCase().includes("срок")
+    ) {
+      return {
+        text: "счёт просрочен",
+        tone: "danger",
+      };
+    }
+
+    return {
+      text: "ошибка оплаты",
+      tone: "danger",
+    };
+  }
+
+  return {
+    text: "в процессе",
+    tone: "warning",
+  };
+}
+
+function getToneClass(tone: "default" | "success" | "warning" | "danger") {
+  switch (tone) {
+    case "success":
+      return "bg-green-50 text-green-700 border-green-200";
+    case "warning":
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "danger":
+      return "bg-red-50 text-red-700 border-red-200";
+    default:
+      return "bg-zinc-50 text-zinc-700 border-zinc-200";
+  }
+}
+
 export function AdminMonetizationRequests({
   initialRequests,
 }: {
@@ -34,6 +83,14 @@ export function AdminMonetizationRequests({
   const [requests, setRequests] = useState(initialRequests);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const visibleRequests = useMemo(
+    () =>
+      requests.filter(
+        (item) => item.status !== "completed" && item.status !== "cancelled",
+      ),
+    [requests],
+  );
 
   async function updateStatus(
     requestId: string,
@@ -52,13 +109,43 @@ export function AdminMonetizationRequests({
         },
       );
 
-      setRequests((prev) =>
-        prev.map((item) => (item._id === requestId ? response.data : item)),
-      );
+      const updated = response.data;
+
+      setRequests((prev) => {
+        if (status === "completed" || status === "cancelled") {
+          return prev.filter((item) => item._id !== requestId);
+        }
+
+        return prev.map((item) => (item._id === requestId ? updated : item));
+      });
 
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка обновления заявки"));
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function syncPayment(requestId: string): Promise<void> {
+    setError("");
+    setLoadingId(requestId);
+
+    try {
+      const response = await api.patch<MonetizationRequestView>(
+        API_ROUTES.adminMonetizationRequestById(requestId),
+        {
+          syncPayment: true,
+        },
+      );
+
+      const updated = response.data;
+
+      setRequests((prev) =>
+        prev.map((item) => (item._id === requestId ? updated : item)),
+      );
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Не удалось проверить оплату"));
     } finally {
       setLoadingId(null);
     }
@@ -77,15 +164,17 @@ export function AdminMonetizationRequests({
       ) : null}
 
       <div className="space-y-4">
-        {requests.length === 0 ? (
+        {visibleRequests.length === 0 ? (
           <div className="rounded-xl border border-border-subtle p-6 text-center text-sm text-zinc-500">
-            Пока нет заявок.
+            Пока нет активных заявок.
           </div>
         ) : null}
 
-        {requests.map((request) => {
+        {visibleRequests.map((request) => {
           const id = request._id ?? "";
           const isLoading = loadingId === id;
+          const paymentState = getPaymentStatusLabel(request);
+          const canApply = request.paymentStatus === "paid";
 
           return (
             <article
@@ -98,27 +187,42 @@ export function AdminMonetizationRequests({
                     {getTypeLabel(request.type)}
                   </div>
                   <div>Email пользователя: {request.userEmail}</div>
+
                   {request.productName ? (
                     <div>Товар: {request.productName}</div>
                   ) : null}
+
                   {request.requestedBoostValue ? (
                     <div>Повышение рейтинга: +{request.requestedBoostValue}</div>
                   ) : null}
+
                   {request.requestedLimitIncrease ? (
                     <div>Увеличение лимита: +{request.requestedLimitIncrease}</div>
                   ) : null}
+
                   {request.message ? (
                     <div>Комментарий: {request.message}</div>
                   ) : null}
+
                   <div>
-                    Оплата: ЕРИП / {request.paymentStatus}
+                    Оплата: ЕРИП
                     {typeof request.paymentAmountBYN === "number"
                       ? ` / ${request.paymentAmountBYN.toFixed(2)} BYN`
                       : ""}
                   </div>
+
+                  <div
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getToneClass(
+                      paymentState.tone,
+                    )}`}
+                  >
+                    Статус оплаты: {paymentState.text}
+                  </div>
+
                   {request.paymentInvoiceNo ? (
                     <div>Номер счёта: {request.paymentInvoiceNo}</div>
                   ) : null}
+
                   {request.paymentInvoiceUrl ? (
                     <div className="break-all">
                       Ссылка на счёт:{" "}
@@ -132,6 +236,14 @@ export function AdminMonetizationRequests({
                       </a>
                     </div>
                   ) : null}
+
+                  {request.paymentExpiresAt ? (
+                    <div>
+                      Действует до:{" "}
+                      {new Date(request.paymentExpiresAt).toLocaleString("ru-RU")}
+                    </div>
+                  ) : null}
+
                   {request.paymentError ? (
                     <div className="text-xs text-red-600">
                       {request.paymentError}
@@ -140,11 +252,20 @@ export function AdminMonetizationRequests({
                 </div>
 
                 <div className="text-sm text-zinc-500">
-                  Статус: {request.status}
+                  Статус заявки: {request.status}
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  className="rounded-full border border-border-subtle px-4 py-2 text-sm font-medium disabled:opacity-60"
+                  onClick={() => syncPayment(id)}
+                >
+                  {isLoading ? "Проверяем..." : "Проверить оплату"}
+                </button>
+
                 <button
                   type="button"
                   disabled={isLoading}
@@ -157,7 +278,7 @@ export function AdminMonetizationRequests({
                 {request.type === "boost_product" ? (
                   <button
                     type="button"
-                    disabled={isLoading}
+                    disabled={isLoading || !canApply}
                     className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                     onClick={() =>
                       updateStatus(id, "completed", {
@@ -172,7 +293,7 @@ export function AdminMonetizationRequests({
                 {request.type === "increase_limit" ? (
                   <button
                     type="button"
-                    disabled={isLoading}
+                    disabled={isLoading || !canApply}
                     className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                     onClick={() =>
                       updateStatus(id, "completed", {

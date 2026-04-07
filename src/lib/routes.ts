@@ -13,6 +13,11 @@ export const API_ROUTES = {
   bookingById: (id: string) => `/api/bookings/${id}`,
 
   monetizationRequests: "/api/monetization/requests",
+  monetizationRequestStatus: (id: string) =>
+    `/api/monetization/requests/${id}/status`,
+  monetizationRequestQr: (id: string) =>
+    `/api/monetization/requests/${id}/qr`,
+
   adminMonetizationRequestById: (id: string) =>
     `/api/admin/monetization-requests/${id}`,
 } as const;

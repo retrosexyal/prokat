@@ -14,6 +14,9 @@ import { ProfileSettings } from "@/components/ProfileSettings";
 import { getAllCategories } from "@/lib/categories";
 import { CategoryDoc } from "@/types/category";
 import { toCategoryView } from "@/lib/category-mappers";
+import { getMonetizationRequestsForUser } from "@/lib/monetization-requests";
+import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
+import type { MonetizationRequestView } from "@/types/monetization";
 
 const FREE_PRODUCTS_LIMIT = 3;
 
@@ -22,6 +25,7 @@ export default async function DashboardPage() {
 
   let myProducts: ProductDoc[] = [];
   let myBookings: BookingView[] = [];
+  let myMonetizationRequests: MonetizationRequestView[] = [];
   let userProfile: Pick<
     UserType,
     "name" | "phone" | "showPhoneInProducts" | "pickupAddress"
@@ -48,6 +52,14 @@ export default async function DashboardPage() {
 
       const ownerBookings = await getBookingsForOwner(String(user._id));
       myBookings = toBookingViews(ownerBookings);
+
+      const monetizationRequests = await getMonetizationRequestsForUser(
+        user._id,
+        {
+          onlyActive: true,
+        },
+      );
+      myMonetizationRequests = toMonetizationRequestViews(monetizationRequests);
 
       userProfile = {
         name: user.name ?? "",
@@ -87,6 +99,7 @@ export default async function DashboardPage() {
         initialPickupAddress={userProfile.pickupAddress}
         categories={categories.map((cat) => toCategoryView(cat))}
         currentProductLimit={productLimit}
+        initialMonetizationRequests={myMonetizationRequests}
       />
     </div>
   );

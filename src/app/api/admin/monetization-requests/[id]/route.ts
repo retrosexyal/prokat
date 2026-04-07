@@ -9,8 +9,13 @@ import {
   updateMonetizationRequestStatus,
 } from "@/lib/monetization-requests";
 import { toMonetizationRequestView } from "@/lib/monetization-mappers";
-import type { MonetizationRequestStatus } from "@/types/monetization";
+import { getExpressPayInvoiceStatus } from "@/lib/express-pay";
+import type {
+  MonetizationRequestDoc,
+  MonetizationRequestStatus,
+} from "@/types/monetization";
 import type { UserType } from "@/types";
+import type { ProductDoc } from "@/types/product";
 
 const ALLOWED_STATUSES: MonetizationRequestStatus[] = [
   "pending",
@@ -22,6 +27,89 @@ const ALLOWED_STATUSES: MonetizationRequestStatus[] = [
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
+
+type UserDbDoc = UserType & {
+  _id: ObjectId;
+};
+
+type ProductDbDoc = ProductDoc & {
+  _id: ObjectId;
+};
+
+function toObjectId(value: unknown): ObjectId | null {
+  if (value instanceof ObjectId) {
+    return value;
+  }
+
+  if (typeof value === "string" && ObjectId.isValid(value)) {
+    return new ObjectId(value);
+  }
+
+  return null;
+}
+
+function mapProviderStatusToPatch(
+  requestDoc: MonetizationRequestDoc,
+  providerStatus?: number,
+): {
+  paymentPatch: Partial<MonetizationRequestDoc>;
+  nextStatus?: MonetizationRequestStatus;
+} | null {
+  switch (providerStatus) {
+    case 1:
+      return {
+        paymentPatch: {
+          paymentStatus: "invoice_created",
+          paymentError: undefined,
+        },
+      };
+
+    case 2:
+      return {
+        paymentPatch: {
+          paymentStatus: "failed",
+          paymentError: "Срок действия счёта истёк",
+        },
+      };
+
+    case 3:
+    case 6:
+      return {
+        paymentPatch: {
+          paymentStatus: "paid",
+          paymentError: undefined,
+        },
+        nextStatus: requestDoc.status === "completed" ? "completed" : "paid",
+      };
+
+    case 4:
+      return {
+        paymentPatch: {
+          paymentStatus: "failed",
+          paymentError: "Счёт оплачен частично",
+        },
+      };
+
+    case 5:
+      return {
+        paymentPatch: {
+          paymentStatus: "failed",
+          paymentError: "Счёт отменён",
+        },
+      };
+
+    case 7:
+      return {
+        paymentPatch: {
+          paymentStatus: "failed",
+          paymentError: "Платёж был возвращён",
+        },
+      };
+
+    default:
+      return null;
+  }
+}
 
 export async function PATCH(request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
@@ -40,31 +128,114 @@ export async function PATCH(request: Request, context: RouteContext) {
     status?: MonetizationRequestStatus;
     applyBoost?: boolean;
     applyLimitIncrease?: boolean;
+    syncPayment?: boolean;
   };
 
   const status = body.status;
   const applyBoost = Boolean(body.applyBoost);
   const applyLimitIncrease = Boolean(body.applyLimitIncrease);
-
-  if (!status || !ALLOWED_STATUSES.includes(status)) {
-    return NextResponse.json({ error: "Некорректный статус" }, { status: 400 });
-  }
+  const syncPayment = Boolean(body.syncPayment);
 
   const client = await clientPromise;
   const db = client.db();
 
-  const existing = await db.collection("monetizationRequests").findOne({
-    _id: new ObjectId(id),
-  });
+  const existing = await db
+    .collection<MonetizationRequestDoc>("monetizationRequests")
+    .findOne({
+      _id: new ObjectId(id),
+    });
 
   if (!existing) {
     return NextResponse.json({ error: "Заявка не найдена" }, { status: 404 });
   }
 
+  if (syncPayment) {
+    if (!existing.paymentInvoiceNo) {
+      return NextResponse.json(
+        { error: "У заявки нет номера счёта" },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const providerState = await getExpressPayInvoiceStatus(
+        Number(existing.paymentInvoiceNo),
+      );
+
+      const mapped = mapProviderStatusToPatch(existing, providerState.Status);
+
+      if (!mapped) {
+        return NextResponse.json(
+          { error: "Не удалось определить статус оплаты" },
+          { status: 502 },
+        );
+      }
+
+      let updated = await updateMonetizationRequestPayment(
+        id,
+        mapped.paymentPatch,
+      );
+
+      if (mapped.nextStatus) {
+        const processedByEmail =
+          typeof session?.user?.email === "string"
+            ? session.user.email
+            : undefined;
+
+        updated = await updateMonetizationRequestStatus(
+          id,
+          mapped.nextStatus,
+          processedByEmail,
+        );
+      }
+
+      const latest = await db
+        .collection<MonetizationRequestDoc>("monetizationRequests")
+        .findOne({
+          _id: new ObjectId(id),
+        });
+
+      return NextResponse.json(
+        latest ? toMonetizationRequestView(latest) : null,
+      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Не удалось проверить статус оплаты";
+
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+  }
+
+  if (!status || !ALLOWED_STATUSES.includes(status)) {
+    return NextResponse.json({ error: "Некорректный статус" }, { status: 400 });
+  }
+
   if (status === "completed") {
-    if (applyBoost && existing.type === "boost_product" && existing.productId) {
-      await db.collection("products").updateOne(
-        { _id: existing.productId },
+    if (existing.paymentStatus !== "paid") {
+      return NextResponse.json(
+        {
+          error:
+            "Нельзя применить заявку, пока оплата не подтверждена. Сначала нажмите «Проверить оплату».",
+        },
+        { status: 400 },
+      );
+    }
+
+    const existingProductId = toObjectId(existing.productId);
+    const existingUserId = toObjectId(existing.userId);
+
+    if (applyBoost && existing.type === "boost_product") {
+      if (!existingProductId) {
+        return NextResponse.json(
+          { error: "У заявки отсутствует корректный productId" },
+          { status: 400 },
+        );
+      }
+
+      await db.collection<ProductDbDoc>("products").updateOne(
+        { _id: existingProductId },
         {
           $inc: { ratingBoost: Number(existing.requestedBoostValue ?? 0) },
           $set: { updatedAt: new Date() },
@@ -73,8 +244,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (applyLimitIncrease && existing.type === "increase_limit") {
-      await db.collection<UserType>("users").updateOne(
-        { _id: existing.userId },
+      if (!existingUserId) {
+        return NextResponse.json(
+          { error: "У заявки отсутствует корректный userId" },
+          { status: 400 },
+        );
+      }
+
+      await db.collection<UserDbDoc>("users").updateOne(
+        { _id: existingUserId },
         {
           $inc: { productLimit: Number(existing.requestedLimitIncrease ?? 0) },
         },
@@ -91,7 +269,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (status === "cancelled") {
     await updateMonetizationRequestPayment(id, {
-      paymentStatus: "failed",
+      paymentStatus:
+        existing.paymentStatus === "paid" ? existing.paymentStatus : "failed",
     });
   }
 
