@@ -10,6 +10,10 @@ import {
 } from "@/lib/monetization-requests";
 import { toMonetizationRequestView } from "@/lib/monetization-mappers";
 import { getExpressPayInvoiceStatus } from "@/lib/express-pay";
+import {
+  BOOST_FIXED_VALUE,
+  calculateBoostExpiration,
+} from "@/lib/boost-pricing";
 import type {
   MonetizationRequestDoc,
   MonetizationRequestStatus,
@@ -129,12 +133,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     applyBoost?: boolean;
     applyLimitIncrease?: boolean;
     syncPayment?: boolean;
+    revertExpiredBoost?: boolean;
   };
 
   const status = body.status;
   const applyBoost = Boolean(body.applyBoost);
   const applyLimitIncrease = Boolean(body.applyLimitIncrease);
   const syncPayment = Boolean(body.syncPayment);
+  const revertExpiredBoost = Boolean(body.revertExpiredBoost);
 
   const client = await clientPromise;
   const db = client.db();
@@ -147,6 +153,67 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (!existing) {
     return NextResponse.json({ error: "Заявка не найдена" }, { status: 404 });
+  }
+
+  if (revertExpiredBoost) {
+    const productId = toObjectId(existing.productId);
+
+    if (!productId) {
+      return NextResponse.json(
+        { error: "У заявки отсутствует корректный productId" },
+        { status: 400 },
+      );
+    }
+
+    const product = await db.collection<ProductDbDoc>("products").findOne({
+      _id: productId,
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+    }
+
+    if (
+      !(product.boostExpiresAt instanceof Date) ||
+      product.boostExpiresAt.getTime() > Date.now()
+    ) {
+      return NextResponse.json(
+        { error: "Срок действия буста ещё не закончился" },
+        { status: 400 },
+      );
+    }
+
+    if (typeof product.boostRestoreValue !== "number") {
+      return NextResponse.json(
+        { error: "Не найдено значение рейтинга для восстановления" },
+        { status: 400 },
+      );
+    }
+
+    await db.collection<ProductDbDoc>("products").updateOne(
+      { _id: productId },
+      {
+        $set: {
+          ratingBoost: product.boostRestoreValue,
+          priorityScore: product.boostRestoreValue,
+          updatedAt: new Date(),
+        },
+        $unset: {
+          boostRestoreValue: "",
+          boostAppliedAt: "",
+          boostExpiresAt: "",
+          boostDuration: "",
+        },
+      },
+    );
+
+    const latest = await db
+      .collection<MonetizationRequestDoc>("monetizationRequests")
+      .findOne({
+        _id: new ObjectId(id),
+      });
+
+    return NextResponse.json(latest ? toMonetizationRequestView(latest) : null);
   }
 
   if (syncPayment) {
@@ -234,13 +301,48 @@ export async function PATCH(request: Request, context: RouteContext) {
         );
       }
 
+      const product = await db.collection<ProductDbDoc>("products").findOne({
+        _id: existingProductId,
+      });
+
+      if (!product) {
+        return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+      }
+
+      const currentRating = Number(product.ratingBoost ?? 0);
+      const boostValue = Number(existing.requestedBoostValue ?? BOOST_FIXED_VALUE);
+      const appliedAt = new Date();
+      const expiresAt = existing.boostDuration
+        ? calculateBoostExpiration(existing.boostDuration, appliedAt)
+        : existing.boostExpiresAt ?? appliedAt;
+
       await db.collection<ProductDbDoc>("products").updateOne(
         { _id: existingProductId },
         {
-          $inc: { ratingBoost: Number(existing.requestedBoostValue ?? 0) },
-          $set: { updatedAt: new Date() },
+          $set: {
+            ratingBoost: currentRating + boostValue,
+            priorityScore: currentRating + boostValue,
+            boostRestoreValue: currentRating,
+            boostAppliedAt: appliedAt,
+            boostExpiresAt: expiresAt,
+            boostDuration: existing.boostDuration,
+            updatedAt: appliedAt,
+          },
         },
       );
+
+      await db
+        .collection<MonetizationRequestDoc>("monetizationRequests")
+        .updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              boostAppliedAt: appliedAt,
+              boostExpiresAt: expiresAt,
+              updatedAt: new Date(),
+            },
+          },
+        );
     }
 
     if (applyLimitIncrease && existing.type === "increase_limit") {

@@ -200,6 +200,7 @@ export default async function RegionPage({ params, searchParams }: Props) {
                   productId={product._id?.toString() || ""}
                   pickupAddress={product.pickupAddress}
                   ownerPhone={product.ownerPhone || ""}
+                  ratingBoost={product.ratingBoost}
                 />
               ))}
             </div>

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CatalogSearch } from "@/components/CatalogSearch";
 import { CitySelector } from "@/components/CitySelector";
 import { getRequestCity } from "@/lib/request-city";
-import { getRealCityBySlug, isRegionSlug, type RegionSlug } from "@/lib/cities";
+import { /* getRealCityBySlug, */ isRegionSlug, type RegionSlug } from "@/lib/cities";
 
 type LayoutHeaderProps = {
   forcedRegion?: string;
@@ -15,10 +15,10 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
   const initialRegion: RegionSlug =
     forcedRegion && isRegionSlug(forcedRegion) ? forcedRegion : requestCity.slug;
 
-  const currentCity =
+/*   const currentCity =
     forcedRegion && forcedRegion !== "all"
       ? getRealCityBySlug(forcedRegion)
-      : requestCity;
+      : requestCity; */
 
   return (
     <header className="border-b border-border-subtle bg-header">
@@ -45,7 +45,7 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
         </div>
 
         <nav className="flex items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-          {currentCity ? (
+          {/* {currentCity ? (
             <Link
               href={`/${currentCity.slug}`}
               className="hidden rounded-full border border-border-subtle bg-white px-3 py-2 text-xs text-zinc-700 transition hover:bg-zinc-50 sm:inline-flex sm:items-center sm:text-sm"
@@ -53,7 +53,7 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
             >
               Сейчас: {currentCity.name}
             </Link>
-          ) : null}
+          ) : null} */}
 
           <CitySelector initialRegion={initialRegion} />
 

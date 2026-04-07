@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
+import { BOOST_FIXED_VALUE, getBoostDurationLabel } from "@/lib/boost-pricing";
 import type {
   MonetizationRequestStatus,
   MonetizationRequestView,
@@ -25,9 +26,7 @@ function getTypeLabel(type: MonetizationRequestView["type"]): string {
     : "Увеличить лимит";
 }
 
-function getPaymentStatusLabel(
-  request: MonetizationRequestView,
-): {
+function getPaymentStatusLabel(request: MonetizationRequestView): {
   text: string;
   tone: "default" | "success" | "warning" | "danger";
 } {
@@ -111,13 +110,9 @@ export function AdminMonetizationRequests({
 
       const updated = response.data;
 
-      setRequests((prev) => {
-        if (status === "completed" || status === "cancelled") {
-          return prev.filter((item) => item._id !== requestId);
-        }
-
-        return prev.map((item) => (item._id === requestId ? updated : item));
-      });
+      setRequests((prev) =>
+        prev.map((item) => (item._id === requestId ? updated : item)),
+      );
 
       router.refresh();
     } catch (error: unknown) {
@@ -192,12 +187,21 @@ export function AdminMonetizationRequests({
                     <div>Товар: {request.productName}</div>
                   ) : null}
 
-                  {request.requestedBoostValue ? (
-                    <div>Повышение рейтинга: +{request.requestedBoostValue}</div>
+                  {request.type === "boost_product" ? (
+                    <>
+                      <div>Повышение рейтинга: +{BOOST_FIXED_VALUE}</div>
+                      {request.boostDuration ? (
+                        <div>
+                          Срок: {getBoostDurationLabel(request.boostDuration)}
+                        </div>
+                      ) : null}
+                    </>
                   ) : null}
 
                   {request.requestedLimitIncrease ? (
-                    <div>Увеличение лимита: +{request.requestedLimitIncrease}</div>
+                    <div>
+                      Увеличение лимита: +{request.requestedLimitIncrease}
+                    </div>
                   ) : null}
 
                   {request.message ? (
@@ -240,7 +244,9 @@ export function AdminMonetizationRequests({
                   {request.paymentExpiresAt ? (
                     <div>
                       Действует до:{" "}
-                      {new Date(request.paymentExpiresAt).toLocaleString("ru-RU")}
+                      {new Date(request.paymentExpiresAt).toLocaleString(
+                        "ru-RU",
+                      )}
                     </div>
                   ) : null}
 

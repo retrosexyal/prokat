@@ -9,6 +9,7 @@ import { ProductBookingForm } from "../ProductBookingForm";
 import { Button } from "../ui/Button";
 import type { CitySlug } from "@/lib/cities";
 import { getProductPath } from "@/lib/routes";
+import { BOOST_HIGHLIGHT_THRESHOLD } from "@/lib/boost-pricing";
 
 type Props = {
   productId: string;
@@ -23,6 +24,7 @@ type Props = {
   ownerPhone?: string;
   isHideButton?: boolean;
   pickupAddress?: string;
+  ratingBoost?: number;
 };
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
@@ -40,6 +42,7 @@ export function ProductCard({
   ownerPhone,
   isHideButton,
   pickupAddress,
+  ratingBoost = 0,
 }: Props) {
   const normalizedImages = useMemo(() => {
     const filtered = images.filter(Boolean);
@@ -59,10 +62,18 @@ export function ProductCard({
   const selectedImage = normalizedImages[selectedIndex] ?? FALLBACK_IMAGE;
   const showThumbnails = normalizedImages.length > 1;
   const productHref = getProductPath({ slug, category, citySlug });
+  const isFeatured = ratingBoost > BOOST_HIGHLIGHT_THRESHOLD;
 
   return (
     <>
-      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-black/5 bg-white text-black shadow-sm transition hover:shadow-md">
+      <div
+        className={[
+          "flex h-full flex-col overflow-hidden rounded-xl border bg-white text-black shadow-sm transition hover:shadow-md",
+          isFeatured
+            ? "product-card-premium border-amber-200/80 shadow-[0_12px_30px_-20px_rgba(245,158,11,0.6)]"
+            : "border-black/5",
+        ].join(" ")}
+      >
         <button
           type="button"
           onClick={() => setIsImageModalOpen(true)}
@@ -72,7 +83,7 @@ export function ProductCard({
           <img
             src={selectedImage}
             alt={name}
-            className="h-full w-full object-contain"
+            className="relative z-[1] h-full w-full object-contain"
           />
           <AvailabilityBadge available={available} />
         </button>

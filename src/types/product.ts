@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { CitySlug } from "@/lib/cities";
+import type { BoostDuration } from "@/types/monetization";
 
 export type ProductStatus = "pending" | "approved" | "rejected";
 
@@ -26,9 +27,12 @@ export type ProductDoc = {
   ownerPhone?: string;
   pickupAddress?: string;
 
-  // Платное продвижение
   ratingBoost?: number;
   priorityScore?: number;
+  boostRestoreValue?: number;
+  boostAppliedAt?: Date;
+  boostExpiresAt?: Date;
+  boostDuration?: BoostDuration;
 };
 
 export type ProductView = {
@@ -56,4 +60,8 @@ export type ProductView = {
 
   ratingBoost?: number;
   priorityScore?: number;
+  boostRestoreValue?: number;
+  boostAppliedAt?: string;
+  boostExpiresAt?: string;
+  boostDuration?: BoostDuration;
 };

@@ -98,6 +98,7 @@ export default async function HomePage() {
               pickupAddress={p.pickupAddress}
               category={p.category}
               citySlug={p.citySlug}
+              ratingBoost={p.ratingBoost}
             />
           ))}
         </div>

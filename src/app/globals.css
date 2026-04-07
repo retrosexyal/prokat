@@ -221,3 +221,39 @@ input[type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
 }
+
+.product-card-premium {
+  position: relative;
+  isolation: isolate;
+}
+
+.product-card-premium::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 64, 0.26), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(255, 184, 0, 0.18), transparent 34%);
+  opacity: 0.9;
+  animation: premium-card-glow 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.product-card-premium > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes premium-card-glow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.82;
+  }
+
+  50% {
+    transform: translate3d(0, -6px, 0) scale(1.03);
+    opacity: 1;
+  }
+}

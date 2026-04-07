@@ -205,18 +205,20 @@ export async function getApprovedProducts(
   }
 
   const cityPriorityStage = citySlug
-    ? {
-        $addFields: {
-          cityPriority: {
-            $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
-          },
+  ? {
+      $addFields: {
+        cityPriority: {
+          $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
         },
-      }
-    : {
-        $addFields: {
-          cityPriority: 0,
-        },
-      };
+        priorityScore: { $ifNull: ["$ratingBoost", 0] },
+      },
+    }
+  : {
+      $addFields: {
+        cityPriority: 0,
+        priorityScore: { $ifNull: ["$ratingBoost", 0] },
+      },
+    };
 
   const pipeline = [
     { $match: matchStage },
@@ -336,4 +338,18 @@ export async function updateProductStatus(
     );
 
   return res ?? null;
+}
+
+export async function getExpiredBoostedProducts(): Promise<ProductDoc[]> {
+  const client = await clientPromise;
+  const db = client.db();
+
+  return db
+    .collection<ProductDoc>(COLLECTION)
+    .find({
+      boostExpiresAt: { $lte: new Date() },
+      boostRestoreValue: { $exists: true },
+    })
+    .sort({ boostExpiresAt: 1, updatedAt: -1 })
+    .toArray();
 }

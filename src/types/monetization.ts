@@ -14,6 +14,8 @@ export type MonetizationPaymentStatus =
   | "paid"
   | "failed";
 
+export type BoostDuration = "week" | "month" | "year";
+
 export type MonetizationRequestDoc = {
   _id?: ObjectId;
   userId: ObjectId;
@@ -27,6 +29,9 @@ export type MonetizationRequestDoc = {
   message?: string;
   requestedLimitIncrease?: number;
   requestedBoostValue?: number;
+  boostDuration?: BoostDuration;
+  boostAppliedAt?: Date;
+  boostExpiresAt?: Date;
 
   paymentProvider: PaymentProvider;
   paymentStatus: MonetizationPaymentStatus;
@@ -58,6 +63,9 @@ export type MonetizationRequestView = {
   message?: string;
   requestedLimitIncrease?: number;
   requestedBoostValue?: number;
+  boostDuration?: BoostDuration;
+  boostAppliedAt?: string;
+  boostExpiresAt?: string;
 
   paymentProvider: PaymentProvider;
   paymentStatus: MonetizationPaymentStatus;

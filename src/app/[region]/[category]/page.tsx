@@ -231,6 +231,7 @@ export default async function RegionCategoryPage({
                   productId={product._id?.toString() || ""}
                   pickupAddress={product.pickupAddress}
                   ownerPhone={product.ownerPhone || ""}
+                  ratingBoost={product.ratingBoost}
                 />
               ))}
             </div>

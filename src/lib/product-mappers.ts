@@ -25,6 +25,10 @@ export function toProductView(product: ProductDoc): ProductView {
     pickupAddress: product.pickupAddress,
     ratingBoost: product.ratingBoost ?? 0,
     priorityScore: product.priorityScore ?? product.ratingBoost ?? 0,
+    boostRestoreValue: product.boostRestoreValue,
+    boostAppliedAt: product.boostAppliedAt?.toISOString(),
+    boostExpiresAt: product.boostExpiresAt?.toISOString(),
+    boostDuration: product.boostDuration,
   };
 }
 

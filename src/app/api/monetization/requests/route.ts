@@ -17,9 +17,16 @@ import {
   getExpressPayInvoiceStatus,
   getMonetizationPricing,
 } from "@/lib/express-pay";
+import {
+  BOOST_FIXED_VALUE,
+  calculateBoostExpiration,
+  getBoostDurationLabel,
+  getBoostPriceByDuration,
+} from "@/lib/boost-pricing";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type {
+  BoostDuration,
   MonetizationRequestDoc,
   MonetizationRequestType,
 } from "@/types/monetization";
@@ -28,6 +35,8 @@ const ALLOWED_TYPES: MonetizationRequestType[] = [
   "increase_limit",
   "boost_product",
 ];
+
+const ALLOWED_BOOST_DURATIONS: BoostDuration[] = ["week", "month", "year"];
 const PAYMENT_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 function roundMoney(value: number): number {
@@ -174,13 +183,13 @@ export async function POST(request: Request) {
     productId?: string;
     message?: string;
     requestedLimitIncrease?: number;
-    requestedBoostValue?: number;
+    boostDuration?: BoostDuration;
   };
 
   const type = body.type;
   const message = String(body.message ?? "").trim();
   const requestedLimitIncrease = Number(body.requestedLimitIncrease ?? 0);
-  const requestedBoostValue = Number(body.requestedBoostValue ?? 0);
+  const boostDuration = body.boostDuration;
   const productId = String(body.productId ?? "").trim();
 
   if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -202,11 +211,20 @@ export async function POST(request: Request) {
   }
 
   let product: ProductDoc | null = null;
+  let requestedBoostValue: number | undefined;
+  let boostExpiresAt: Date | undefined;
 
   if (type === "boost_product") {
     if (!ObjectId.isValid(productId)) {
       return NextResponse.json(
         { error: "Некорректный товар" },
+        { status: 400 },
+      );
+    }
+
+    if (!boostDuration || !ALLOWED_BOOST_DURATIONS.includes(boostDuration)) {
+      return NextResponse.json(
+        { error: "Выберите срок повышения рейтинга" },
         { status: 400 },
       );
     }
@@ -220,12 +238,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
     }
 
-    if (requestedBoostValue < 1) {
+    const now = Date.now();
+    const activeBoostExpiresAt = product.boostExpiresAt?.getTime();
+    const hasPendingManualRestore =
+      typeof product.boostRestoreValue === "number" &&
+      (product.ratingBoost ?? 0) !== product.boostRestoreValue;
+
+    if (activeBoostExpiresAt && activeBoostExpiresAt > now) {
       return NextResponse.json(
-        { error: "Укажите, на сколько повысить рейтинг" },
+        {
+          error:
+            "Для этого товара уже действует платный рейтинг. Дождитесь окончания срока или завершения заявки администратором.",
+        },
         { status: 400 },
       );
     }
+
+    if (
+      activeBoostExpiresAt &&
+      activeBoostExpiresAt <= now &&
+      hasPendingManualRestore
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Срок предыдущего буста уже закончился. Сначала администратор должен вручную вернуть рейтинг товара к прежнему значению.",
+        },
+        { status: 400 },
+      );
+    }
+
+    requestedBoostValue = BOOST_FIXED_VALUE;
+    boostExpiresAt = calculateBoostExpiration(boostDuration);
   }
 
   if (type === "increase_limit" && requestedLimitIncrease < 1) {
@@ -239,7 +283,7 @@ export async function POST(request: Request) {
   const paymentAmountBYN =
     type === "increase_limit"
       ? roundMoney(requestedLimitIncrease * pricing.limitPricePerItemBYN)
-      : roundMoney(requestedBoostValue * pricing.boostPricePerPointBYN);
+      : roundMoney(getBoostPriceByDuration(boostDuration as BoostDuration));
 
   if (!Number.isFinite(paymentAmountBYN) || paymentAmountBYN <= 0) {
     return NextResponse.json(
@@ -258,8 +302,9 @@ export async function POST(request: Request) {
     message,
     requestedLimitIncrease:
       type === "increase_limit" ? requestedLimitIncrease : undefined,
-    requestedBoostValue:
-      type === "boost_product" ? requestedBoostValue : undefined,
+    requestedBoostValue,
+    boostDuration: type === "boost_product" ? boostDuration : undefined,
+    boostExpiresAt,
     paymentProvider: "erip",
     paymentStatus: "pending",
     paymentAmountBYN,
@@ -270,7 +315,7 @@ export async function POST(request: Request) {
   const info =
     type === "increase_limit"
       ? `Увеличение лимита объявлений на ${requestedLimitIncrease}`
-      : `Повышение рейтинга товара ${product?.name ?? ""} на ${requestedBoostValue}`.trim();
+      : `Повышение рейтинга товара ${product?.name ?? ""} на +${BOOST_FIXED_VALUE} / ${getBoostDurationLabel(boostDuration as BoostDuration)}`.trim();
 
   const paymentExpiresAt = new Date(Date.now() + PAYMENT_LIFETIME_MS);
 
