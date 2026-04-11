@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { getApprovedProducts } from "@/lib/products";
 import { getAllCategories } from "@/lib/categories";
 import { ProductCard } from "@/components/ProductCard";
+import { getSiteUrl } from "@/lib/site-url";
 
-const SITE_URL = "https://prokatik.by";
+const SITE_URL = getSiteUrl();
 
 export const dynamic = "force-dynamic";
 

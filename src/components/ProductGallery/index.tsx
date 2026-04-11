@@ -38,18 +38,20 @@ export function ProductGallery({ name, images = [] }: Props) {
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="w-full self-start space-y-3">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex min-h-[320px] w-full items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-zinc-50"
+          className="group relative block w-full overflow-hidden rounded-xl border border-border-subtle bg-zinc-50"
           aria-label={`Открыть изображение товара ${name}`}
         >
-          <img
-            src={selectedImage}
-            alt={buildImageAlt(name)}
-            className="max-h-[420px] w-full object-contain"
-          />
+          <div className="relative aspect-square w-full">
+            <img
+              src={selectedImage}
+              alt={buildImageAlt(name)}
+              className="absolute inset-0 h-full w-full object-contain p-3 sm:p-4"
+            />
+          </div>
         </button>
 
         {showThumbnails ? (
@@ -63,7 +65,7 @@ export function ProductGallery({ name, images = [] }: Props) {
                   type="button"
                   onClick={() => setSelectedIndex(index)}
                   className={[
-                    "shrink-0 overflow-hidden rounded-lg border bg-white transition",
+                    "relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white transition",
                     isActive
                       ? "border-black ring-2 ring-black/15"
                       : "border-border-subtle hover:border-zinc-300",
@@ -73,7 +75,7 @@ export function ProductGallery({ name, images = [] }: Props) {
                   <img
                     src={image}
                     alt={buildImageAlt(name, index)}
-                    className="h-20 w-20 object-cover"
+                    className="h-full w-full object-cover"
                     loading="lazy"
                   />
                 </button>
@@ -108,7 +110,7 @@ export function ProductGallery({ name, images = [] }: Props) {
                     type="button"
                     onClick={() => setSelectedIndex(index)}
                     className={[
-                      "shrink-0 overflow-hidden rounded-lg border bg-white transition",
+                      "relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white transition",
                       isActive
                         ? "border-black ring-2 ring-black/15"
                         : "border-border-subtle hover:border-zinc-300",
@@ -118,7 +120,7 @@ export function ProductGallery({ name, images = [] }: Props) {
                     <img
                       src={image}
                       alt={buildImageAlt(name, index)}
-                      className="h-20 w-20 object-cover"
+                      className="h-full w-full object-cover"
                     />
                   </button>
                 );

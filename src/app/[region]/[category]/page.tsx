@@ -10,6 +10,7 @@ import {
   isCitySlug,
   isRegionSlug,
 } from "@/lib/cities";
+import { getSiteUrl } from "@/lib/site-url";
 
 type Props = {
   params: Promise<{ region: string; category: string }>;
@@ -30,7 +31,7 @@ const REGION_SLUGS = [
 ];
 
 const PRODUCTS_PER_PAGE = 12;
-const SITE_URL = "https://prokatik.by";
+const SITE_URL = getSiteUrl();
 
 export const dynamic = "force-dynamic";
 
@@ -156,7 +157,6 @@ export default async function RegionCategoryPage({
   ]);
 
   const activeCategories = categories.filter((item) => item.isActive);
-
   const categoryItem = activeCategories.find((item) => item.slug === category);
 
   if (!categoryItem) {
@@ -170,7 +170,9 @@ export default async function RegionCategoryPage({
   }
 
   const childCategories = activeCategories
-    .filter((item) => item.parentId?.toString() === categoryItem._id?.toString())
+    .filter(
+      (item) => item.parentId?.toString() === categoryItem._id?.toString(),
+    )
     .sort((a, b) => {
       if (a.sortOrder !== b.sortOrder) {
         return a.sortOrder - b.sortOrder;
@@ -180,6 +182,42 @@ export default async function RegionCategoryPage({
     });
 
   const hasChildren = childCategories.length > 0;
+
+  const parentCategory = categoryItem.parentId
+    ? activeCategories.find(
+        (item) => item._id?.toString() === categoryItem.parentId?.toString(),
+      )
+    : null;
+
+  const siblingCategories = parentCategory
+    ? activeCategories
+        .filter(
+          (item) =>
+            item.parentId?.toString() === parentCategory._id?.toString() &&
+            item.slug !== categoryItem.slug,
+        )
+        .sort((a, b) => {
+          if (a.sortOrder !== b.sortOrder) {
+            return a.sortOrder - b.sortOrder;
+          }
+
+          return a.name.localeCompare(b.name, "ru");
+        })
+        .slice(0, 8)
+    : [];
+
+  const otherRootCategories = activeCategories
+    .filter((item) => item.level === 1)
+    .filter((item) => item.slug !== categoryItem.slug)
+    .filter((item) => item.slug !== parentCategory?.slug)
+    .sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+
+      return a.name.localeCompare(b.name, "ru");
+    })
+    .slice(0, 10);
 
   const currentPage = Math.max(
     Number(resolvedSearchParams?.page ?? "1") || 1,
@@ -268,6 +306,29 @@ export default async function RegionCategoryPage({
         }
       : null;
 
+  const relatedCategoriesJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name:
+      region === ALL_REGION_SLUG
+        ? `Другие категории рядом с ${categoryItem.name}`
+        : `Другие категории аренды в ${city.nameIn}`,
+    itemListElement: [
+      ...otherRootCategories.map((item, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${SITE_URL}/${region}/${item.slug}`,
+        name: item.h1?.trim() || item.name,
+      })),
+      ...siblingCategories.map((item, index) => ({
+        "@type": "ListItem",
+        position: otherRootCategories.length + index + 1,
+        url: `${SITE_URL}/${region}/${item.slug}`,
+        name: item.h1?.trim() || item.name,
+      })),
+    ],
+  };
+
   function buildCategoryHref(params: { page?: number; q?: string }) {
     const query = new URLSearchParams();
 
@@ -303,6 +364,15 @@ export default async function RegionCategoryPage({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(faqJsonLd),
+          }}
+        />
+      ) : null}
+
+      {otherRootCategories.length > 0 || siblingCategories.length > 0 ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(relatedCategoriesJsonLd),
           }}
         />
       ) : null}
@@ -471,6 +541,66 @@ export default async function RegionCategoryPage({
           </div>
         </section>
       )}
+
+      {siblingCategories.length > 0 ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
+            <h2 className="text-xl font-semibold text-zinc-900">
+              Похожие разделы
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Соседние подкатегории внутри того же раздела. Этот блок помогает
+              быстро перейти к близким тематикам и усиливает внутреннюю
+              перелинковку.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 px-4 py-4 sm:px-5">
+            {siblingCategories.map((item) => (
+              <Link
+                key={item._id?.toString() ?? item.slug}
+                href={`/${region}/${item.slug}`}
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-white"
+              >
+                {item.h1?.trim() || item.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {otherRootCategories.length > 0 ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
+            <h2 className="text-xl font-semibold text-zinc-900">
+              Другие категории в этом городе
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Дополнительные разделы каталога в том же регионе. Такие ссылки
+              помогают пользователю находить альтернативы, а поисковым системам
+              лучше понимать структуру локального каталога.
+            </p>
+          </div>
+
+          <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5 xl:grid-cols-3">
+            {otherRootCategories.map((item) => (
+              <Link
+                key={item._id?.toString() ?? item.slug}
+                href={`/${region}/${item.slug}`}
+                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 transition hover:border-zinc-300 hover:bg-white"
+              >
+                <div className="text-base font-semibold text-zinc-900">
+                  {item.h1?.trim() || item.name}
+                </div>
+                <div className="mt-2 text-sm leading-6 text-zinc-600">
+                  {item.introText?.trim() ||
+                    `Перейти в категорию "${item.name}" и посмотреть предложения по аренде.`}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {faqItems.length > 0 ? (
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">

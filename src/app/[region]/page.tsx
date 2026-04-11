@@ -10,6 +10,7 @@ import {
   isCitySlug,
   isRegionSlug,
 } from "@/lib/cities";
+import { getSiteUrl } from "@/lib/site-url";
 
 type Props = {
   params: Promise<{ region: string }>;
@@ -20,7 +21,7 @@ type Props = {
 };
 
 const PRODUCTS_PER_PAGE = 12;
-const SITE_URL = "https://prokatik.by";
+const SITE_URL = getSiteUrl();
 
 export function generateStaticParams() {
   return [
@@ -144,8 +145,9 @@ export default async function RegionPage({ params, searchParams }: Props) {
     }),
   ]);
 
-  const rootCategories = categories
-    .filter((category) => category.isActive)
+  const activeCategories = categories.filter((category) => category.isActive);
+
+  const rootCategories = activeCategories
     .filter((category) => category.level === 1)
     .sort((a, b) => {
       if (a.sortOrder !== b.sortOrder) {
@@ -158,10 +160,10 @@ export default async function RegionPage({ params, searchParams }: Props) {
   const childCategoriesByParent = new Map(
     rootCategories.map((parent) => [
       parent._id?.toString(),
-      categories
-        .filter((category) => category.isActive)
+      activeCategories
         .filter(
-          (category) => category.parentId?.toString() === parent._id?.toString(),
+          (category) =>
+            category.parentId?.toString() === parent._id?.toString(),
         )
         .sort((a, b) => {
           if (a.sortOrder !== b.sortOrder) {
@@ -172,6 +174,8 @@ export default async function RegionPage({ params, searchParams }: Props) {
         }),
     ]),
   );
+
+  const featuredCategoryLinks = rootCategories.slice(0, 12);
 
   const introText =
     region === ALL_REGION_SLUG
@@ -197,6 +201,21 @@ export default async function RegionPage({ params, searchParams }: Props) {
     ],
   };
 
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name:
+      region === ALL_REGION_SLUG
+        ? "Популярные категории аренды по Беларуси"
+        : `Популярные категории аренды в ${city.nameIn}`,
+    itemListElement: featuredCategoryLinks.map((category, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${SITE_URL}/${region}/${category.slug}`,
+      name: category.h1?.trim() || category.name,
+    })),
+  };
+
   function buildRegionHref(params: { page?: number; q?: string }) {
     const query = new URLSearchParams();
 
@@ -218,6 +237,13 @@ export default async function RegionPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(breadcrumbJsonLd),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(itemListJsonLd),
         }}
       />
 
@@ -248,59 +274,6 @@ export default async function RegionPage({ params, searchParams }: Props) {
           <div className="text-sm text-zinc-500">
             Найдено: {totalProducts} позиций
           </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
-          <h2 className="text-xl font-semibold text-zinc-900">Категории</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Основные разделы каталога для этого региона.
-          </p>
-        </div>
-
-        <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-2">
-          {rootCategories.map((category) => {
-            const children =
-              childCategoriesByParent.get(category._id?.toString()) ?? [];
-
-            return (
-              <div
-                key={category._id?.toString() ?? category.slug}
-                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
-              >
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <Link
-                      href={`/${region}/${category.slug}`}
-                      className="text-lg font-semibold text-zinc-900 hover:text-zinc-700"
-                    >
-                      {category.h1?.trim() || category.name}
-                    </Link>
-
-                    <p className="mt-2 text-sm leading-6 text-zinc-600">
-                      {category.introText?.trim() ||
-                        `Перейти в раздел "${category.name}" и посмотреть доступные предложения.`}
-                    </p>
-                  </div>
-
-                  {children.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {children.map((child) => (
-                        <Link
-                          key={child._id?.toString() ?? child.slug}
-                          href={`/${region}/${child.slug}`}
-                          className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-100"
-                        >
-                          {child.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </section>
 
@@ -382,6 +355,83 @@ export default async function RegionPage({ params, searchParams }: Props) {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
+          <h2 className="text-xl font-semibold text-zinc-900">
+            Популярные категории
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Быстрые переходы по основным разделам каталога для усиления
+            внутренней перелинковки внутри региона.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 px-4 py-4 sm:px-5">
+          {featuredCategoryLinks.map((category) => (
+            <Link
+              key={category._id?.toString() ?? category.slug}
+              href={`/${region}/${category.slug}`}
+              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-white"
+            >
+              {category.h1?.trim() || category.name}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
+          <h2 className="text-xl font-semibold text-zinc-900">Категории</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Основные разделы каталога для этого региона.
+          </p>
+        </div>
+
+        <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-2">
+          {rootCategories.map((category) => {
+            const children =
+              childCategoriesByParent.get(category._id?.toString()) ?? [];
+
+            return (
+              <div
+                key={category._id?.toString() ?? category.slug}
+                className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5"
+              >
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <Link
+                      href={`/${region}/${category.slug}`}
+                      className="text-lg font-semibold text-zinc-900 hover:text-zinc-700"
+                    >
+                      {category.h1?.trim() || category.name}
+                    </Link>
+
+                    <p className="mt-2 text-sm leading-6 text-zinc-600">
+                      {category.introText?.trim() ||
+                        `Перейти в раздел "${category.name}" и посмотреть доступные предложения.`}
+                    </p>
+                  </div>
+
+                  {children.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {children.map((child) => (
+                        <Link
+                          key={child._id?.toString() ?? child.slug}
+                          href={`/${region}/${child.slug}`}
+                          className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-100"
+                        >
+                          {child.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

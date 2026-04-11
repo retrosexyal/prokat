@@ -27,6 +27,59 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function buildAvailabilityStages(startOfDay: Date, endOfDay: Date) {
+  return [
+    {
+      $lookup: {
+        from: "bookings",
+        let: { productId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$productId", "$$productId"] },
+                  { $eq: ["$status", "confirmed"] },
+                  { $lte: ["$startDate", endOfDay] },
+                  { $gte: ["$endDate", startOfDay] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "activeBookingsToday",
+      },
+    },
+    {
+      $addFields: {
+        availableQuantityNow: {
+          $max: [
+            0,
+            {
+              $subtract: [
+                { $ifNull: ["$quantity", 1] },
+                { $size: "$activeBookingsToday" },
+              ],
+            },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        isAvailableNow: {
+          $gt: ["$availableQuantityNow", 0],
+        },
+      },
+    },
+    {
+      $project: {
+        activeBookingsToday: 0,
+      },
+    },
+  ];
+}
+
 export type GetApprovedProductsWithAvailabilityParams = {
   category?: string;
   page?: number;
@@ -111,54 +164,7 @@ export async function getApprovedProductsWithAvailability(
             },
             { $skip: skip },
             { $limit: limit },
-            {
-              $lookup: {
-                from: "bookings",
-                let: { productId: "$_id" },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ["$productId", "$$productId"] },
-                          { $eq: ["$status", "confirmed"] },
-                          { $lte: ["$startDate", endOfDay] },
-                          { $gte: ["$endDate", startOfDay] },
-                        ],
-                      },
-                    },
-                  },
-                ],
-                as: "activeBookingsToday",
-              },
-            },
-            {
-              $addFields: {
-                availableQuantityNow: {
-                  $max: [
-                    0,
-                    {
-                      $subtract: [
-                        { $ifNull: ["$quantity", 1] },
-                        { $size: "$activeBookingsToday" },
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
-            {
-              $addFields: {
-                isAvailableNow: {
-                  $gt: ["$availableQuantityNow", 0],
-                },
-              },
-            },
-            {
-              $project: {
-                activeBookingsToday: 0,
-              },
-            },
+            ...buildAvailabilityStages(startOfDay, endOfDay),
           ],
           totalCount: [{ $count: "count" }],
         },
@@ -178,6 +184,63 @@ export async function getApprovedProductsWithAvailability(
     totalPages,
     currentPage,
   };
+}
+
+export type GetRelatedProductsParams = {
+  excludeProductId?: string;
+  category?: string;
+  citySlug?: CitySlug;
+  limit?: number;
+};
+
+export async function getRelatedProductsWithAvailability(
+  params: GetRelatedProductsParams = {},
+): Promise<ApprovedProductWithAvailability[]> {
+  const client = await clientPromise;
+  const db = client.db();
+  const { startOfDay, endOfDay } = getTodayRange();
+
+  const category = params.category?.trim() ?? "";
+  const citySlug = params.citySlug?.trim() ?? "";
+  const limit = Math.max(params.limit ?? 6, 1);
+
+  const matchStage: Record<string, unknown> = {
+    status: "approved",
+  };
+
+  if (category) {
+    matchStage.category = category;
+  }
+
+  if (citySlug) {
+    matchStage.citySlug = citySlug;
+  }
+
+  if (params.excludeProductId && ObjectId.isValid(params.excludeProductId)) {
+    matchStage._id = { $ne: new ObjectId(params.excludeProductId) };
+  }
+
+  const products = await db
+    .collection<ProductDoc>(COLLECTION)
+    .aggregate<ApprovedProductWithAvailability>([
+      { $match: matchStage },
+      {
+        $addFields: {
+          priorityScore: { $ifNull: ["$ratingBoost", 0] },
+        },
+      },
+      {
+        $sort: {
+          priorityScore: -1,
+          createdAt: -1,
+        },
+      },
+      { $limit: limit },
+      ...buildAvailabilityStages(startOfDay, endOfDay),
+    ])
+    .toArray();
+
+  return products;
 }
 
 export type GetApprovedProductsParams = {
@@ -205,20 +268,20 @@ export async function getApprovedProducts(
   }
 
   const cityPriorityStage = citySlug
-  ? {
-      $addFields: {
-        cityPriority: {
-          $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
+    ? {
+        $addFields: {
+          cityPriority: {
+            $cond: [{ $eq: ["$citySlug", citySlug] }, 0, 1],
+          },
+          priorityScore: { $ifNull: ["$ratingBoost", 0] },
         },
-        priorityScore: { $ifNull: ["$ratingBoost", 0] },
-      },
-    }
-  : {
-      $addFields: {
-        cityPriority: 0,
-        priorityScore: { $ifNull: ["$ratingBoost", 0] },
-      },
-    };
+      }
+    : {
+        $addFields: {
+          cityPriority: 0,
+          priorityScore: { $ifNull: ["$ratingBoost", 0] },
+        },
+      };
 
   const pipeline = [
     { $match: matchStage },
