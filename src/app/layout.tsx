@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     description: "Аренда товаров в Беларуси",
     images: ["/og.png"],
   },
+  /* toDo убрать потом */
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({

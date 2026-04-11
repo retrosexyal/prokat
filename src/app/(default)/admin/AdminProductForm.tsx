@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductDoc } from "@/types/product";
+import type { CategoryView } from "@/types/category";
 
 type Props = {
   initialProducts: ProductDoc[];
@@ -11,7 +12,7 @@ type Props = {
 const emptyForm = {
   name: "",
   slug: "",
-  category: "instrument",
+  category: "",
   short: "",
   depositBYN: 0,
   pricePerDayBYN: 0,
@@ -24,10 +25,92 @@ const emptyForm = {
 export function AdminProductForm({ initialProducts }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState(initialProducts);
+  const [categories, setCategories] = useState<CategoryView[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const parentMap = useMemo(() => {
+    return new Map(categories.map((category) => [category._id, category]));
+  }, [categories]);
+
+  const selectableCategories = useMemo(() => {
+    return categories
+      .filter((category) => category.isActive)
+      .filter((category) => {
+        return !categories.some(
+          (candidate) => candidate.parentId === category._id,
+        );
+      })
+      .sort((a, b) => {
+        if (a.level !== b.level) {
+          return a.level - b.level;
+        }
+
+        if (a.sortOrder !== b.sortOrder) {
+          return a.sortOrder - b.sortOrder;
+        }
+
+        return a.name.localeCompare(b.name, "ru");
+      });
+  }, [categories]);
+
+  function getCategoryLabel(category: CategoryView): string {
+    if (!category.parentId) {
+      return category.name;
+    }
+
+    const parent = parentMap.get(category.parentId);
+
+    if (!parent) {
+      return category.name;
+    }
+
+    return `${parent.name} → ${category.name}`;
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCategories() {
+      try {
+        setCategoriesLoading(true);
+
+        const response = await fetch("/api/categories", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json().catch(() => []);
+
+        if (!response.ok) {
+          throw new Error("Не удалось загрузить категории");
+        }
+
+        if (active) {
+          setCategories(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error ? err.message : "Ошибка загрузки категорий",
+          );
+        }
+      } finally {
+        if (active) {
+          setCategoriesLoading(false);
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function startEdit(p: ProductDoc) {
     setEditingId(p._id?.toString() ?? null);
@@ -86,7 +169,14 @@ export function AdminProductForm({ initialProducts }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!form.category) {
+      setError("Выберите категорию товара");
+      return;
+    }
+
     setLoading(true);
+
     try {
       const payload = {
         ...form,
@@ -144,13 +234,11 @@ export function AdminProductForm({ initialProducts }: Props) {
         </h1>
         <p className="text-xs sm:text-sm text-zinc-600 mb-4">
           Здесь можно добавлять новые позиции и редактировать существующие.
-          Картинки загружаются в Cloudinary прямо из формы ниже.
+          Товар нужно привязывать к конечной категории, а не к родительскому
+          разделу.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-3 sm:grid-cols-2"
-        >
+        <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs sm:text-sm">
             Название
             <input
@@ -182,12 +270,28 @@ export function AdminProductForm({ initialProducts }: Props) {
                   category: e.target.value as (typeof form)["category"],
                 })
               }
+              disabled={categoriesLoading}
+              required
             >
-              <option value="instrument">Инструменты</option>
-              <option value="ladder">Лестницы</option>
-              <option value="level">Уровни</option>
-              <option value="vacuum">Пылесосы</option>
-              <option value="other">Другое</option>
+              <option value="">
+                {categoriesLoading
+                  ? "Загрузка категорий..."
+                  : "Выберите категорию"}
+              </option>
+
+              {!selectableCategories.some(
+                (category) => category.slug === form.category,
+              ) && form.category ? (
+                <option value={form.category}>
+                  Текущая категория ({form.category})
+                </option>
+              ) : null}
+
+              {selectableCategories.map((category) => (
+                <option value={category.slug} key={category._id ?? category.slug}>
+                  {getCategoryLabel(category)}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -301,7 +405,7 @@ export function AdminProductForm({ initialProducts }: Props) {
           <div className="sm:col-span-2 flex gap-3">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || categoriesLoading}
               className="rounded-full bg-accent-strong px-6 py-2 text-sm font-semibold text-black hover:bg-accent disabled:opacity-60"
             >
               {editingId ? "Сохранить изменения" : "Добавить товар"}
@@ -375,4 +479,3 @@ export function AdminProductForm({ initialProducts }: Props) {
     </div>
   );
 }
-

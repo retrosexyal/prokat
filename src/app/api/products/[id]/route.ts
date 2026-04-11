@@ -107,6 +107,18 @@ export async function PATCH(request: Request, context: RouteContext) {
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const short = String(formData.get("short") ?? "").trim();
+  const fullDescription = String(formData.get("fullDescription") ?? "").trim();
+  const brand = String(formData.get("brand") ?? "").trim();
+  const model = String(formData.get("model") ?? "").trim();
+
+  const rawCondition = String(formData.get("condition") ?? "").trim();
+  const condition =
+    rawCondition === "new" ||
+    rawCondition === "excellent" ||
+    rawCondition === "good" ||
+    rawCondition === "used"
+      ? rawCondition
+      : "good";
   const organization = String(formData.get("organization") ?? "").trim();
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
@@ -115,6 +127,39 @@ export async function PATCH(request: Request, context: RouteContext) {
   const rawCity = String(formData.get("city") ?? "").trim();
   const rawCitySlug = String(formData.get("citySlug") ?? "").trim();
   const pickupAddress = String(formData.get("pickupAddress") ?? "").trim();
+  const deliveryAvailable =
+    String(formData.get("deliveryAvailable") ?? "") === "true";
+
+  const kitIncluded = formData
+    .getAll("kitIncluded")
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+
+  const specifications = formData
+    .getAll("specifications")
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, ...valueParts] = line.split(":");
+      return {
+        label: label?.trim() ?? "",
+        value: valueParts.join(":").trim(),
+      };
+    })
+    .filter((item) => item.label && item.value);
+
+  const faq = formData
+    .getAll("faq")
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [q, ...aParts] = line.split("||");
+      return {
+        q: q?.trim() ?? "",
+        a: aParts.join("||").trim(),
+      };
+    })
+    .filter((item) => item.q && item.a);
 
   const keptImages = formData
     .getAll("keptImages")
@@ -188,7 +233,11 @@ export async function PATCH(request: Request, context: RouteContext) {
         name,
         category,
         short,
+        fullDescription: fullDescription || undefined,
         organization,
+        brand: brand || undefined,
+        model: model || undefined,
+        condition,
         depositBYN,
         pricePerDayBYN,
         minDays,
@@ -196,6 +245,10 @@ export async function PATCH(request: Request, context: RouteContext) {
         city,
         citySlug,
         pickupAddress,
+        deliveryAvailable,
+        kitIncluded,
+        specifications,
+        faq,
         images: nextImages,
         imagePublicIds: nextImagePublicIds,
         status: "pending",

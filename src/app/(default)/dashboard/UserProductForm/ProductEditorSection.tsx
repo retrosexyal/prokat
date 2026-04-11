@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useMemo, type FormEvent } from "react";
 import { CITIES, getRealCityBySlug } from "@/lib/cities";
 import { FileDropzone } from "@/components/ui/FileDropzone";
 import type { CategoryView } from "@/types/category";
@@ -47,13 +47,56 @@ export function ProductEditorSection({
   onRemoveSelectedImage,
   onRemoveAllNewImages,
 }: Props) {
+  const parentMap = useMemo(() => {
+    return new Map(categories.map((category) => [category._id, category]));
+  }, [categories]);
+
+  const selectableCategories = useMemo(() => {
+    return categories
+      .filter((category) => category.isActive)
+      .filter((category) => {
+        return !categories.some(
+          (candidate) => candidate.parentId === category._id,
+        );
+      })
+      .sort((a, b) => {
+        if (a.level !== b.level) {
+          return a.level - b.level;
+        }
+
+        if (a.sortOrder !== b.sortOrder) {
+          return a.sortOrder - b.sortOrder;
+        }
+
+        return a.name.localeCompare(b.name, "ru");
+      });
+  }, [categories]);
+
+  const hasCurrentCategoryInOptions = selectableCategories.some(
+    (category) => category.slug === form.category,
+  );
+
+  function getCategoryLabel(category: CategoryView): string {
+    if (!category.parentId) {
+      return category.name;
+    }
+
+    const parent = parentMap.get(category.parentId);
+
+    if (!parent) {
+      return category.name;
+    }
+
+    return `${parent.name} → ${category.name}`;
+  }
+
   return (
-    <section className="bg-white rounded-xl border border-border-subtle p-4 sm:p-6">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-4">
+    <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
+      <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
         {isEditing ? "Редактировать товар" : "Добавить товар"}
       </h2>
 
-      <p className="text-xs sm:text-sm text-zinc-600 mb-4">
+      <p className="mb-4 text-xs text-zinc-600 sm:text-sm">
         {isEditing
           ? "После сохранения товар снова уйдет на модерацию."
           : "Заполните поля и отправьте товар на модерацию."}
@@ -83,10 +126,19 @@ export function ProductEditorSection({
                 category: event.target.value as ProductFormValues["category"],
               }))
             }
+            required
           >
-            {categories.map(({ name, slug }) => (
-              <option value={slug} key={slug}>
-                {name}
+            <option value="">Выберите категорию</option>
+
+            {!hasCurrentCategoryInOptions && form.category ? (
+              <option value={form.category}>
+                Текущая категория ({form.category})
+              </option>
+            ) : null}
+
+            {selectableCategories.map((category) => (
+              <option value={category.slug} key={category._id ?? category.slug}>
+                {getCategoryLabel(category)}
               </option>
             ))}
           </select>
@@ -117,6 +169,61 @@ export function ProductEditorSection({
           </select>
         </label>
 
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Организация
+          <input
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.organization}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, organization: event.target.value }))
+            }
+            placeholder="Например: Prokat Servis"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Бренд
+          <input
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.brand}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, brand: event.target.value }))
+            }
+            placeholder="Например: Bosch"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Модель
+          <input
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.model}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, model: event.target.value }))
+            }
+            placeholder="Например: GSB 13 RE"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Состояние
+          <select
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.condition}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                condition: event.target.value as ProductFormValues["condition"],
+              }))
+            }
+          >
+            <option value="new">Новый</option>
+            <option value="excellent">Отличное</option>
+            <option value="good">Хорошее</option>
+            <option value="used">Б/у</option>
+          </select>
+        </label>
+
         <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
           Адрес самовывоза или укажите если доставка
           <input
@@ -132,6 +239,20 @@ export function ProductEditorSection({
           />
         </label>
 
+        <label className="flex items-center gap-2 rounded-md border px-3 py-3 text-xs sm:text-sm sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={form.deliveryAvailable}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                deliveryAvailable: event.target.checked,
+              }))
+            }
+          />
+          Есть доставка
+        </label>
+
         <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
           Короткое описание
           <textarea
@@ -142,6 +263,22 @@ export function ProductEditorSection({
               setForm((prev) => ({ ...prev, short: event.target.value }))
             }
             required
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+          Полное описание
+          <textarea
+            className="rounded-md border px-2 py-1.5 text-sm"
+            rows={7}
+            value={form.fullDescription}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                fullDescription: event.target.value,
+              }))
+            }
+            placeholder="Подробно опиши товар, для каких задач он подходит, что входит в комплект, в каком он состоянии и какие условия аренды."
           />
         </label>
 
@@ -214,6 +351,54 @@ export function ProductEditorSection({
               }))
             }
             required
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+          Комплект
+          <textarea
+            className="rounded-md border px-2 py-1.5 text-sm"
+            rows={4}
+            value={form.kitIncludedText}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                kitIncludedText: event.target.value,
+              }))
+            }
+            placeholder={`Каждый пункт с новой строки:\nДрель\nКейс\nЗарядка\n2 аккумулятора`}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+          Характеристики
+          <textarea
+            className="rounded-md border px-2 py-1.5 text-sm"
+            rows={5}
+            value={form.specificationsText}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                specificationsText: event.target.value,
+              }))
+            }
+            placeholder={`Каждая характеристика с новой строки в формате:\nМощность: 600 Вт\nПитание: от сети\nВес: 1.8 кг`}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+          FAQ для карточки
+          <textarea
+            className="rounded-md border px-2 py-1.5 text-sm"
+            rows={6}
+            value={form.faqText}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                faqText: event.target.value,
+              }))
+            }
+            placeholder={`Каждый вопрос и ответ через "||", с новой строки:\nДля чего подходит дрель? || Для сверления дерева, металла и бытовых задач.\nЧто входит в комплект? || Кейс, зарядка и аккумуляторы.`}
           />
         </label>
 
@@ -290,10 +475,10 @@ export function ProductEditorSection({
         </div>
 
         {error ? (
-          <div className="sm:col-span-2 text-xs text-red-600">{error}</div>
+          <div className="text-xs text-red-600 sm:col-span-2">{error}</div>
         ) : null}
 
-        <div className="sm:col-span-2 flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 sm:col-span-2">
           <button
             type="submit"
             disabled={loading}

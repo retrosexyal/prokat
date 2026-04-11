@@ -10,6 +10,14 @@ type Props = {
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
 
+function buildImageAlt(name: string, index?: number) {
+  if (typeof index === "number") {
+    return `${name} в аренду — фото ${index + 1}`;
+  }
+
+  return `${name} в аренду — основное фото`;
+}
+
 export function ProductGallery({ name, images = [] }: Props) {
   const normalizedImages = useMemo(() => {
     const filtered = images.filter(Boolean);
@@ -39,7 +47,7 @@ export function ProductGallery({ name, images = [] }: Props) {
         >
           <img
             src={selectedImage}
-            alt={name}
+            alt={buildImageAlt(name)}
             className="max-h-[420px] w-full object-contain"
           />
         </button>
@@ -64,8 +72,9 @@ export function ProductGallery({ name, images = [] }: Props) {
                 >
                   <img
                     src={image}
-                    alt={`${name} ${index + 1}`}
+                    alt={buildImageAlt(name, index)}
                     className="h-20 w-20 object-cover"
+                    loading="lazy"
                   />
                 </button>
               );
@@ -83,7 +92,7 @@ export function ProductGallery({ name, images = [] }: Props) {
           <div className="flex h-[75vh] items-center justify-center rounded-xl bg-zinc-50">
             <img
               src={selectedImage}
-              alt={name}
+              alt={buildImageAlt(name, selectedIndex)}
               className="max-h-full max-w-full object-contain"
             />
           </div>
@@ -108,7 +117,7 @@ export function ProductGallery({ name, images = [] }: Props) {
                   >
                     <img
                       src={image}
-                      alt={`${name} ${index + 1}`}
+                      alt={buildImageAlt(name, index)}
                       className="h-20 w-20 object-cover"
                     />
                   </button>

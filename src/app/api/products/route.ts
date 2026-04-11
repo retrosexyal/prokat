@@ -5,7 +5,13 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { createProduct, getProductsByOwner } from "@/lib/products";
 import { cloudinary } from "@/lib/cloudinary";
-import type { ProductDoc, ProductView } from "@/types/product";
+import type {
+  ProductCondition,
+  ProductDoc,
+  ProductFaqItem,
+  ProductSpecificationItem,
+  ProductView,
+} from "@/types/product";
 import type { UserType } from "@/types";
 import { toProductView } from "@/lib/product-mappers";
 import { generateUniqueSlug } from "@/lib/slug";
@@ -60,6 +66,47 @@ async function uploadImage(file: Blob): Promise<{
   });
 }
 
+function parseCondition(value: string): ProductCondition {
+  if (
+    value === "new" ||
+    value === "excellent" ||
+    value === "good" ||
+    value === "used"
+  ) {
+    return value;
+  }
+
+  return "good";
+}
+
+function parseSpecifications(lines: FormDataEntryValue[]): ProductSpecificationItem[] {
+  return lines
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, ...valueParts] = line.split(":");
+      return {
+        label: label?.trim() ?? "",
+        value: valueParts.join(":").trim(),
+      };
+    })
+    .filter((item) => item.label && item.value);
+}
+
+function parseFaq(lines: FormDataEntryValue[]): ProductFaqItem[] {
+  return lines
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [q, ...aParts] = line.split("||");
+      return {
+        q: q?.trim() ?? "",
+        a: aParts.join("||").trim(),
+      };
+    })
+    .filter((item) => item.q && item.a);
+}
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
@@ -70,26 +117,42 @@ export async function POST(request: Request) {
   const formData = await request.formData();
 
   const name = String(formData.get("name") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim() as ProductDoc["category"];
 
-  const category = String(
-    formData.get("category") ?? "",
-  ).trim() as ProductDoc["category"];
   const short = String(formData.get("short") ?? "").trim();
+  const fullDescription = String(formData.get("fullDescription") ?? "").trim();
+
   const organization = String(formData.get("organization") ?? "").trim();
+  const brand = String(formData.get("brand") ?? "").trim();
+  const model = String(formData.get("model") ?? "").trim();
+  const condition = parseCondition(String(formData.get("condition") ?? "").trim());
+
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
   const minDays = Number(formData.get("minDays") ?? 1);
   const quantity = Number(formData.get("quantity") ?? 1);
+
   const rawCity = String(formData.get("city") ?? "").trim();
   const rawCitySlug = String(formData.get("citySlug") ?? "").trim();
+
+  const pickupAddress = String(formData.get("pickupAddress") ?? "").trim();
+  const deliveryAvailable = String(formData.get("deliveryAvailable") ?? "") === "true";
+
+  const kitIncluded = formData
+    .getAll("kitIncluded")
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+
+  const specifications = parseSpecifications(formData.getAll("specifications"));
+  const faq = parseFaq(formData.getAll("faq"));
 
   const resolvedCity = resolveCity(rawCitySlug || rawCity);
   const city = resolvedCity.name;
   const citySlug = resolvedCity.slug;
+
   const files = formData.getAll("files").filter((item): item is File => {
     return typeof item !== "string";
   });
-  const pickupAddress = String(formData.get("pickupAddress") ?? "").trim();
 
   if (
     !name ||
@@ -144,29 +207,43 @@ export async function POST(request: Request) {
   }
 
   const uploadResults = await Promise.all(files.map(uploadImage));
-
   const images = uploadResults.map((item) => item.secure_url);
   const imagePublicIds = uploadResults.map((item) => item.public_id);
 
   const product = await createProduct({
     ownerId: user._id as ObjectId,
     ownerEmail: session.user.email,
+
     name,
     slug,
     category,
+
     short,
-    organization,
+    fullDescription: fullDescription || undefined,
+
+    organization: organization || undefined,
+    brand: brand || undefined,
+    model: model || undefined,
+    condition,
+
     depositBYN,
     pricePerDayBYN,
     minDays,
     quantity,
+
     city,
     citySlug,
+    pickupAddress: pickupAddress || undefined,
+    deliveryAvailable,
+
+    kitIncluded,
+    specifications,
+    faq,
+
     images,
     imagePublicIds,
     status: "pending",
     ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
-    pickupAddress,
   });
 
   const serialized: ProductView = toProductView(product);

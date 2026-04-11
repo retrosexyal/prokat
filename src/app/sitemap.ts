@@ -13,30 +13,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getApprovedProducts(),
   ]);
 
+  const indexableCategories = categories.filter(
+    (category) =>
+      category.isActive &&
+      category.indexingMode === "index" &&
+      typeof category.slug === "string" &&
+      category.slug.length > 0,
+  );
+
+  const regionCities = CITIES.filter((city) => city.slug !== "all");
+
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${base}/`, lastModified: now },
     { url: `${base}/all`, lastModified: now },
     { url: `${base}/terms`, lastModified: now },
     { url: `${base}/rules`, lastModified: now },
     { url: `${base}/agreement`, lastModified: now },
-    { url: `${base}/dashboard`, lastModified: now },
   ];
 
-  const regionPages: MetadataRoute.Sitemap = CITIES.map((city) => ({
-    url: `${base}/${city.slug}`,
-    lastModified: now,
-  }));
+  const regionPages: MetadataRoute.Sitemap = [
+    { url: `${base}/all`, lastModified: now },
+    ...regionCities.map((city) => ({
+      url: `${base}/${city.slug}`,
+      lastModified: now,
+    })),
+  ];
 
-  const categoryPages: MetadataRoute.Sitemap = CITIES.flatMap((city) =>
-    categories
-      .filter(
-        (category) => typeof category.slug === "string" && category.slug.length > 0,
-      )
-      .map((category) => ({
+  const categoryPages: MetadataRoute.Sitemap = [
+    ...indexableCategories.map((category) => ({
+      url: `${base}/all/${category.slug}`,
+      lastModified: category.updatedAt ?? now,
+    })),
+    ...regionCities.flatMap((city) =>
+      indexableCategories.map((category) => ({
         url: `${base}/${city.slug}/${category.slug}`,
-        lastModified: now,
+        lastModified: category.updatedAt ?? now,
       })),
-  );
+    ),
+  ];
 
   const productPages: MetadataRoute.Sitemap = products.flatMap((product) => {
     if (

@@ -29,6 +29,14 @@ type Props = {
 
 const FALLBACK_IMAGE = "/assets/no-image.webp";
 
+function buildImageAlt(name: string, index?: number) {
+  if (typeof index === "number") {
+    return `${name} в аренду — фото ${index + 1}`;
+  }
+
+  return `${name} в аренду`;
+}
+
 export function ProductCard({
   productId,
   name,
@@ -63,10 +71,15 @@ export function ProductCard({
   const showThumbnails = normalizedImages.length > 1;
   const productHref = getProductPath({ slug, category, citySlug });
   const isFeatured = ratingBoost > BOOST_HIGHLIGHT_THRESHOLD;
+  const shortAddress = pickupAddress?.trim()
+    ? pickupAddress.trim().length > 60
+      ? `${pickupAddress.trim().slice(0, 60)}…`
+      : pickupAddress.trim()
+    : "";
 
   return (
     <>
-      <div
+      <article
         className={[
           "flex h-full flex-col overflow-hidden rounded-xl border bg-white text-black shadow-sm transition hover:shadow-md",
           isFeatured
@@ -74,19 +87,22 @@ export function ProductCard({
             : "border-black/5",
         ].join(" ")}
       >
-        <button
-          type="button"
-          onClick={() => setIsImageModalOpen(true)}
-          className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gray-50"
-          aria-label={`Открыть изображение товара ${name}`}
-        >
-          <img
-            src={selectedImage}
-            alt={name}
-            className="relative z-[1] h-full w-full object-contain"
-          />
-          <AvailabilityBadge available={available} />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsImageModalOpen(true)}
+            className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-gray-50"
+            aria-label={`Открыть изображение товара ${name}`}
+          >
+            <img
+              src={selectedImage}
+              alt={buildImageAlt(name)}
+              className="relative z-[1] h-full w-full object-contain"
+              loading="lazy"
+            />
+            <AvailabilityBadge available={available} />
+          </button>
+        </div>
 
         <div className="flex flex-1 flex-col p-4">
           <div className="mb-3 min-h-[64px]">
@@ -110,8 +126,9 @@ export function ProductCard({
                     >
                       <img
                         src={img}
-                        alt={`${name} ${index + 1}`}
+                        alt={buildImageAlt(name, index)}
                         className="h-14 w-14 bg-gray-50 object-cover"
+                        loading="lazy"
                       />
                     </button>
                   );
@@ -122,11 +139,20 @@ export function ProductCard({
             )}
           </div>
 
-          <h3 className="min-h-[48px] font-medium leading-snug line-clamp-2">
-            {name}
-          </h3>
+          <div className="min-h-[72px]">
+            <h3 className="line-clamp-2 text-base font-medium leading-snug">
+              <Link href={productHref} className="hover:text-zinc-700">
+                {name}
+              </Link>
+            </h3>
 
-          <div className="mt-2">
+            <div className="mt-2 space-y-1 text-sm text-zinc-500">
+              <p>Минимум {minDays} дн.</p>
+              {shortAddress ? <p className="line-clamp-2">{shortAddress}</p> : null}
+            </div>
+          </div>
+
+          <div className="mt-3">
             <PriceBlock pricePerDay={pricePerDay} />
           </div>
 
@@ -140,12 +166,13 @@ export function ProductCard({
             <Link
               href={productHref}
               className="text-sm text-gray-500 hover:text-black"
+              aria-label={`Открыть карточку товара ${name}`}
             >
               Подробнее
             </Link>
           </div>
         </div>
-      </div>
+      </article>
 
       <Modal
         open={isImageModalOpen}
@@ -156,7 +183,7 @@ export function ProductCard({
           <div className="flex h-[75vh] items-center justify-center rounded-xl bg-black/5">
             <img
               src={selectedImage}
-              alt={name}
+              alt={buildImageAlt(name, selectedIndex)}
               className="max-h-full max-w-full object-contain"
             />
           </div>
@@ -181,7 +208,7 @@ export function ProductCard({
                   >
                     <img
                       src={img}
-                      alt={`${name} ${index + 1}`}
+                      alt={buildImageAlt(name, index)}
                       className="h-16 w-16 bg-gray-50 object-cover"
                     />
                   </button>
@@ -196,7 +223,7 @@ export function ProductCard({
         open={isBookingModalOpen}
         title={`Бронирование: ${name}`}
         onClose={() => setIsBookingModalOpen(false)}
-        panelClassName="w-full max-w-2xl rounded-2xl p-4 shadow-xl sm:p-6 max-w-[680px] max-h-[90vh] overflow-y-auto bg-background"
+        panelClassName="max-h-[90vh] w-full max-w-[680px] overflow-y-auto rounded-2xl bg-background p-4 shadow-xl sm:p-6"
       >
         <ProductBookingForm
           productId={productId}

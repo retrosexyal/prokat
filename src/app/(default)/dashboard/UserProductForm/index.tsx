@@ -127,15 +127,32 @@ export function UserProductForm({
       name: product.name ?? "",
       slug: product.slug ?? "",
       category: product.category as ProductFormValues["category"],
+
       short: product.short ?? "",
+      fullDescription: product.fullDescription ?? "",
+
       organization: product.organization ?? "",
+      brand: product.brand ?? "",
+      model: product.model ?? "",
+      condition: product.condition ?? "good",
+
       depositBYN: product.depositBYN ?? 0,
       pricePerDayBYN: product.pricePerDayBYN ?? 0,
       minDays: product.minDays ?? 1,
       quantity: product.quantity ?? 1,
+
       city: product.city ?? "Могилёв",
       citySlug: product.citySlug ?? "mogilev",
       pickupAddress: product.pickupAddress ?? "",
+      deliveryAvailable: product.deliveryAvailable ?? false,
+
+      kitIncludedText: (product.kitIncluded ?? []).join("\n"),
+      specificationsText: (product.specifications ?? [])
+        .map((item) => `${item.label}: ${item.value}`)
+        .join("\n"),
+      faqText: (product.faq ?? [])
+        .map((item) => `${item.q} || ${item.a}`)
+        .join("\n"),
     });
 
     setExistingImages(
@@ -218,6 +235,35 @@ export function UserProductForm({
       formData.append("pickupAddress", form.pickupAddress);
       formData.append("citySlug", form.citySlug);
       formData.append("quantity", String(form.quantity));
+      formData.append("fullDescription", form.fullDescription);
+      formData.append("brand", form.brand);
+      formData.append("model", form.model);
+      formData.append("condition", form.condition);
+      formData.append("deliveryAvailable", String(form.deliveryAvailable));
+
+      form.kitIncludedText
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((item) => {
+          formData.append("kitIncluded", item);
+        });
+
+      form.specificationsText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => {
+          formData.append("specifications", line);
+        });
+
+      form.faqText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => {
+          formData.append("faq", line);
+        });
 
       existingImages.forEach((image) => {
         formData.append("keptImages", image.url);

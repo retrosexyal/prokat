@@ -5,7 +5,17 @@ import clientPromise from "@/lib/mongodb";
 import { createCategory } from "@/lib/categories";
 import { toCategoryView } from "@/lib/category-mappers";
 import { isAdminEmail } from "@/lib/auth";
+import type { CreateCategoryInput } from "@/types/category";
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean);
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -19,9 +29,30 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const name = String(body?.name ?? "").trim();
 
-  if (!name) {
+  const input: CreateCategoryInput = {
+    name: String(body?.name ?? "").trim(),
+    slug: String(body?.slug ?? "").trim(),
+    parentId: body?.parentId ? String(body.parentId) : null,
+
+    isActive: Boolean(body?.isActive ?? true),
+    sortOrder: Number(body?.sortOrder ?? 100),
+    indexingMode: body?.indexingMode === "noindex" ? "noindex" : "index",
+
+    seoTitle: String(body?.seoTitle ?? "").trim(),
+    seoDescription: String(body?.seoDescription ?? "").trim(),
+    h1: String(body?.h1 ?? "").trim(),
+    introText: String(body?.introText ?? "").trim(),
+    synonyms: normalizeStringArray(body?.synonyms),
+    faq: Array.isArray(body?.faq)
+      ? body.faq.map((item: { q?: unknown; a?: unknown }) => ({
+          q: String(item?.q ?? "").trim(),
+          a: String(item?.a ?? "").trim(),
+        }))
+      : [],
+  };
+
+  if (!input.name) {
     return NextResponse.json(
       { error: "Название категории обязательно" },
       { status: 400 },
@@ -32,7 +63,7 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db();
 
-    const category = await createCategory(db, name);
+    const category = await createCategory(db, input);
 
     return NextResponse.json(toCategoryView(category), { status: 201 });
   } catch (error) {
@@ -43,6 +74,27 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Такая категория уже существует" },
         { status: 409 },
+      );
+    }
+
+    if (message === "Parent category not found") {
+      return NextResponse.json(
+        { error: "Родительская категория не найдена" },
+        { status: 400 },
+      );
+    }
+
+    if (message === "Only root categories can be parents") {
+      return NextResponse.json(
+        { error: "Подкатегорию можно создавать только внутри корневой категории" },
+        { status: 400 },
+      );
+    }
+
+    if (message === "Invalid parent category") {
+      return NextResponse.json(
+        { error: "Некорректный parentId" },
+        { status: 400 },
       );
     }
 
