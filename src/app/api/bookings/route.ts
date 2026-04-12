@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
+import { ObjectId, Filter } from "mongodb";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
@@ -8,6 +8,7 @@ import { toBookingView } from "@/lib/booking-mappers";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
+import { sendPushNotification } from "@/lib/push";
 
 const GUEST_BOOKING_LIMIT_PER_HOUR = 3;
 
@@ -27,6 +28,10 @@ function getClientIpAddress(request: Request): string {
   }
 
   return request.headers.get("x-real-ip")?.trim() ?? "";
+}
+
+function formatDate(value: Date): string {
+  return new Intl.DateTimeFormat("ru-RU").format(value);
 }
 
 export async function GET(request: Request) {
@@ -173,14 +178,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const conflicts = await db
-    .collection<BookingDoc>("bookings")
-    .countDocuments({
-      productId: product._id,
-      status: "confirmed",
-      startDate: { $lte: endDate },
-      endDate: { $gte: startDate },
-    });
+  const conflicts = await db.collection<BookingDoc>("bookings").countDocuments({
+    productId: product._id,
+    status: "confirmed",
+    startDate: { $lte: endDate },
+    endDate: { $gte: startDate },
+  });
 
   if (conflicts >= (product.quantity ?? 1)) {
     return NextResponse.json(
@@ -253,6 +256,40 @@ export async function POST(request: Request) {
     endDate,
     status: "pending",
   });
+
+  try {
+    const owner = await db
+      .collection<UserType>("users")
+      .findOne({ _id: product.ownerId } as unknown as Filter<UserType>);
+
+    const subscriptions = owner?.pushSubscriptions ?? [];
+
+    if (subscriptions.length > 0) {
+      const senderLabel = renterEmail ? renterEmail : `Гость · ${phone}`;
+
+      const pushResult = await sendPushNotification(subscriptions, {
+        title: "Новое бронирование",
+        body: `${product.name}: ${formatDate(startDate)} — ${formatDate(endDate)}. ${senderLabel}`,
+        url: "/dashboard",
+        icon: "/favicon-192x192.png",
+        badge: "/favicon-192x192.png",
+      });
+
+      if (pushResult.expiredEndpoints.length > 0) {
+        await db
+          .collection<UserType>("users")
+          .updateOne({ _id: product.ownerId } as unknown as Filter<UserType>, {
+            $pull: {
+              pushSubscriptions: {
+                endpoint: { $in: pushResult.expiredEndpoints },
+              },
+            } as never,
+          });
+      }
+    }
+  } catch (error) {
+    console.error("Booking created, but push notification failed:", error);
+  }
 
   return NextResponse.json(toBookingView(booking), { status: 201 });
 }

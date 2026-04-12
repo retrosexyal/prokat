@@ -3,8 +3,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { SessionProviderClient } from "@/components/providers/SessionProviderClient";
 import { CityCookieSync } from "@/components/CityCookieSync";
+import { PwaInit } from "@/components/PwaInit";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://prokatik.by"),
   title: "Prokatik.by — аренда товаров по Беларуси",
   description:
     "Платформа аренды товаров по Беларуси: инструменты, техника, товары для дома, отдыха и других задач.",
@@ -22,7 +24,6 @@ export const metadata: Metadata = {
     description: "Аренда товаров в Беларуси",
     images: ["/og.png"],
   },
-  /* toDo убрать потом */
   robots: {
     index: false,
     follow: false,
@@ -38,6 +39,7 @@ export default function RootLayout({
     <html lang="ru">
       <body className="bg-background text-foreground">
         <SessionProviderClient>
+          <PwaInit />
           <CityCookieSync />
 
           <div className="bg-accent text-xs text-black sm:text-sm">

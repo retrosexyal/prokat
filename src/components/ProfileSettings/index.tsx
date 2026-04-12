@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
+import { PushNotificationsSettings } from "@/components/PushNotificationsSettings";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 type Props = {
   initialName?: string;
@@ -66,71 +68,77 @@ export function ProfileSettings({
   }
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
-      <h2 className="mb-4 text-xl font-semibold">Личные данные</h2>
+    <div className="space-y-6">
+      <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
+        <h2 className="mb-4 text-xl font-semibold">Личные данные</h2>
 
-      <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-xs sm:text-sm">
-          Имя
-          <input
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-          />
-        </label>
+        <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-xs sm:text-sm">
+            Имя
+            <input
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+            />
+          </label>
 
-        <label className="flex flex-col gap-1 text-xs sm:text-sm">
-          Телефон
-          <input
-            type="tel"
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="+375 (29) 123-45-67"
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-xs sm:text-sm">
+            Телефон
+            <input
+              type="tel"
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="+375 (29) 123-45-67"
+              required
+            />
+          </label>
 
-        <label className="sm:col-span-2 flex items-start gap-2 text-xs sm:text-sm">
-          <input
-            type="checkbox"
-            checked={showPhoneInProducts}
-            onChange={(event) => setShowPhoneInProducts(event.target.checked)}
-            className="mt-0.5"
-          />
-          <span>Показывать мой телефон в товарах и форме бронирования</span>
-        </label>
-        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
-          Адрес самовывоза
-          <input
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={pickupAddress}
-            onChange={(event) => setPickupAddress(event.target.value)}
-            placeholder="Например: Могилёв, ул. Ленинская, 10"
-          />
-        </label>
+          <label className="sm:col-span-2 flex items-start gap-2 text-xs sm:text-sm">
+            <input
+              type="checkbox"
+              checked={showPhoneInProducts}
+              onChange={(event) => setShowPhoneInProducts(event.target.checked)}
+              className="mt-0.5"
+            />
+            <span>Показывать мой телефон в товарах и форме бронирования</span>
+          </label>
 
-        {error ? (
-          <div className="sm:col-span-2 text-xs text-red-600">{error}</div>
-        ) : null}
+          <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+            Адрес самовывоза
+            <input
+              className="rounded-md border px-2 py-1.5 text-sm"
+              value={pickupAddress}
+              onChange={(event) => setPickupAddress(event.target.value)}
+              placeholder="Например: Могилёв, ул. Ленинская, 10"
+            />
+          </label>
 
-        {success ? (
-          <div className="sm:col-span-2 text-xs text-emerald-600">
-            {success}
+          {error ? (
+            <div className="sm:col-span-2 text-xs text-red-600">{error}</div>
+          ) : null}
+
+          {success ? (
+            <div className="sm:col-span-2 text-xs text-emerald-600">
+              {success}
+            </div>
+          ) : null}
+
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-full bg-accent-strong px-6 py-2 text-sm font-semibold text-black disabled:opacity-60"
+            >
+              {loading ? "Сохранение..." : "Сохранить профиль"}
+            </button>
           </div>
-        ) : null}
+        </form>
+      </section>
 
-        <div className="sm:col-span-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-full bg-accent-strong px-6 py-2 text-sm font-semibold text-black disabled:opacity-60"
-          >
-            {loading ? "Сохранение..." : "Сохранить профиль"}
-          </button>
-        </div>
-      </form>
-    </section>
+      <PwaInstallPrompt />
+      <PushNotificationsSettings />
+    </div>
   );
 }
