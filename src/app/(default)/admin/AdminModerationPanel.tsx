@@ -25,6 +25,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
   const [products, setProducts] = useState<ProductView[]>(initialProducts);
   const [error, setError] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   async function changeStatus(
     id: string,
@@ -34,15 +35,11 @@ export function AdminModerationPanel({ initialProducts }: Props) {
     setLoadingId(id);
 
     try {
-      const response = await api.patch<ProductDoc>(
-        API_ROUTES.adminProductById(id),
-        {
-          status,
-        },
-      );
+      await api.patch<ProductDoc>(API_ROUTES.adminProductById(id), {
+        status,
+      });
 
       setProducts((prev) => prev.filter((product) => product._id !== id));
-
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка изменения статуса"));
@@ -51,11 +48,27 @@ export function AdminModerationPanel({ initialProducts }: Props) {
     }
   }
 
+  async function deleteProduct(id: string): Promise<void> {
+    setError("");
+    setLoadingId(id);
+
+    try {
+      await api.delete(API_ROUTES.adminProductById(id));
+      setProducts((prev) => prev.filter((product) => product._id !== id));
+      setDeleteConfirmId(null);
+      router.refresh();
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Ошибка удаления товара"));
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   return (
     <section className="bg-white rounded-xl border border-border-subtle p-4 sm:p-6">
-      <h1 className="text-xl sm:text-2xl font-semibold mb-4">
-        Админка · Модерация товаров
-      </h1>
+      <h2 className="text-xl sm:text-2xl font-semibold mb-4">
+        Заявки на модерацию
+      </h2>
 
       {error ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -64,8 +77,16 @@ export function AdminModerationPanel({ initialProducts }: Props) {
       ) : null}
 
       <div className="space-y-4">
+        {products.length === 0 ? (
+          <div className="rounded-xl border border-border-subtle p-6 text-center text-sm text-zinc-500">
+            Нет товаров на модерации.
+          </div>
+        ) : null}
+
         {products.map((product) => {
           const id = product._id?.toString() ?? null;
+          const isLoading = loadingId === id;
+          const isDeletingConfirmOpen = deleteConfirmId === id;
 
           return (
             <article
@@ -90,7 +111,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold">{product.name}</h2>
+                      <h3 className="text-lg font-semibold">{product.name}</h3>
                       <div className="text-sm text-zinc-500">
                         slug: {product.slug}
                       </div>
@@ -152,7 +173,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
                     <div className="flex flex-wrap gap-2 pt-2">
                       <button
                         type="button"
-                        disabled={loadingId === id}
+                        disabled={isLoading}
                         className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                         onClick={() => changeStatus(id, "approved")}
                       >
@@ -161,12 +182,47 @@ export function AdminModerationPanel({ initialProducts }: Props) {
 
                       <button
                         type="button"
-                        disabled={loadingId === id}
+                        disabled={isLoading}
                         className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                         onClick={() => changeStatus(id, "rejected")}
                       >
                         Отклонить
                       </button>
+
+                      {!isDeletingConfirmOpen ? (
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          className="rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-60"
+                          onClick={() => setDeleteConfirmId(id)}
+                        >
+                          Удалить товар
+                        </button>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                          <span className="text-sm text-red-700">
+                            Точно удалить?
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            className="rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                            onClick={() => deleteProduct(id)}
+                          >
+                            {isLoading ? "Удаление..." : "Да, удалить"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            className="rounded-full border px-3 py-1.5 text-sm disabled:opacity-60"
+                            onClick={() => setDeleteConfirmId(null)}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -174,12 +230,6 @@ export function AdminModerationPanel({ initialProducts }: Props) {
             </article>
           );
         })}
-
-        {products.length === 0 ? (
-          <div className="rounded-xl border border-border-subtle p-6 text-center text-sm text-zinc-500">
-            Нет товаров на модерации.
-          </div>
-        ) : null}
       </div>
     </section>
   );

@@ -1,15 +1,16 @@
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { getExpiredBoostedProducts, getPendingProducts } from "@/lib/products";
-import { AdminModerationPanel } from "./AdminModerationPanel";
-import { toProductViews } from "@/lib/product-mappers";
+import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { isAdminEmail } from "@/lib/auth";
-import { CategoriesManager } from "./CategoriesManager";
+import {
+  getAllProductsForAdmin,
+  getExpiredBoostedProducts,
+  getPendingProducts,
+} from "@/lib/products";
 import { getMonetizationRequestsForAdmin } from "@/lib/monetization-requests";
+import { toProductViews } from "@/lib/product-mappers";
 import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
-import { AdminMonetizationRequests } from "./AdminMonetizationRequests";
-import { AdminExpiredBoosts } from "./AdminExpiredBoosts";
+import { AdminTabs } from "./AdminTabs";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
@@ -18,11 +19,13 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [products, requests, expiredBoostedProducts] = await Promise.all([
-    getPendingProducts(),
-    getMonetizationRequestsForAdmin({ includeProcessed: true }),
-    getExpiredBoostedProducts(),
-  ]);
+  const [pendingProducts, allProducts, requests, expiredBoostedProducts] =
+    await Promise.all([
+      getPendingProducts(),
+      getAllProductsForAdmin(),
+      getMonetizationRequestsForAdmin({ includeProcessed: true }),
+      getExpiredBoostedProducts(),
+    ]);
 
   const expiredBoostRequests = requests.filter((request) => {
     const productId = request.productId?.toString();
@@ -32,17 +35,12 @@ export default async function AdminPage() {
     );
   });
 
-  const serializedProducts = toProductViews(products);
-  const serializedRequests = toMonetizationRequestViews(requests);
-  const serializedExpiredBoostRequests =
-    toMonetizationRequestViews(expiredBoostRequests);
-
   return (
-    <div className="space-y-8">
-      <CategoriesManager />
-      <AdminMonetizationRequests initialRequests={serializedRequests} />
-      <AdminExpiredBoosts initialRequests={serializedExpiredBoostRequests} />
-      <AdminModerationPanel initialProducts={serializedProducts} />
-    </div>
+    <AdminTabs
+      pendingProducts={toProductViews(pendingProducts)}
+      allProducts={toProductViews(allProducts)}
+      monetizationRequests={toMonetizationRequestViews(requests)}
+      expiredBoostRequests={toMonetizationRequestViews(expiredBoostRequests)}
+    />
   );
 }
