@@ -69,6 +69,7 @@ export function UserProductForm({
     null,
   );
   const [bookings, setBookings] = useState<BookingView[]>(initialBookings);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
 
   const [monetizationModal, setMonetizationModal] =
     useState<MonetizationModalState>({
@@ -303,15 +304,11 @@ export function UserProductForm({
           ),
         );
       } else {
-        const response = await api.post<ProductView>(
-          API_ROUTES.products,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
+        const response = await api.post<ProductView>(API_ROUTES.products, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
           },
-        );
+        });
 
         setProducts((prev) => [response.data, ...prev]);
       }
@@ -452,6 +449,22 @@ export function UserProductForm({
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка обновления бронирования"));
+    }
+  }
+
+  async function handleDeleteBooking(bookingId: string): Promise<void> {
+    setError("");
+    setDeletingBookingId(bookingId);
+
+    try {
+      await api.delete(API_ROUTES.bookingById(bookingId));
+
+      setBookings((prev) => prev.filter((booking) => booking._id !== bookingId));
+      router.refresh();
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, "Ошибка удаления бронирования"));
+    } finally {
+      setDeletingBookingId(null);
     }
   }
 
@@ -607,7 +620,9 @@ export function UserProductForm({
         {showBookingsSection ? (
           <BookingsSection
             bookings={bookings}
+            deletingBookingId={deletingBookingId}
             onStatusChange={handleBookingStatusChange}
+            onDelete={handleDeleteBooking}
           />
         ) : null}
       </div>

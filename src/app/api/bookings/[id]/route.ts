@@ -11,30 +11,22 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function getAuthorizedBooking(id: string) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
   }
-
-  const { id } = await context.params;
 
   if (!ObjectId.isValid(id)) {
-    return NextResponse.json(
-      { error: "Некорректный id бронирования" },
-      { status: 400 },
-    );
-  }
-
-  const body = (await request.json()) as {
-    status?: "confirmed" | "cancelled";
-  };
-
-  const nextStatus = body.status;
-
-  if (!nextStatus || !["confirmed", "cancelled"].includes(nextStatus)) {
-    return NextResponse.json({ error: "Некорректный статус" }, { status: 400 });
+    return {
+      error: NextResponse.json(
+        { error: "Некорректный id бронирования" },
+        { status: 400 },
+      ),
+    };
   }
 
   const client = await clientPromise;
@@ -45,10 +37,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   if (!user?._id) {
-    return NextResponse.json(
-      { error: "Пользователь не найден" },
-      { status: 404 },
-    );
+    return {
+      error: NextResponse.json(
+        { error: "Пользователь не найден" },
+        { status: 404 },
+      ),
+    };
   }
 
   const booking = await db.collection<BookingDoc>("bookings").findOne({
@@ -56,14 +50,41 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   if (!booking?._id) {
-    return NextResponse.json(
-      { error: "Бронирование не найдено" },
-      { status: 404 },
-    );
+    return {
+      error: NextResponse.json(
+        { error: "Бронирование не найдено" },
+        { status: 404 },
+      ),
+    };
   }
 
   if (String(booking.productOwnerId) !== String(user._id)) {
-    return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
+    return {
+      error: NextResponse.json({ error: "Нет доступа" }, { status: 403 }),
+    };
+  }
+
+  return { db, booking };
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const authorized = await getAuthorizedBooking(id);
+
+  if (authorized.error) {
+    return authorized.error;
+  }
+
+  const { db, booking } = authorized;
+
+  const body = (await request.json()) as {
+    status?: "confirmed" | "cancelled";
+  };
+
+  const nextStatus = body.status;
+
+  if (!nextStatus || !["confirmed", "cancelled"].includes(nextStatus)) {
+    return NextResponse.json({ error: "Некорректный статус" }, { status: 400 });
   }
 
   if (booking.status === "cancelled") {
@@ -120,4 +141,21 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   return NextResponse.json(updatedBooking);
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const authorized = await getAuthorizedBooking(id);
+
+  if (authorized.error) {
+    return authorized.error;
+  }
+
+  const { db, booking } = authorized;
+
+  await db.collection<BookingDoc>("bookings").deleteOne({
+    _id: booking._id,
+  });
+
+  return NextResponse.json({ success: true, deletedId: id });
 }
