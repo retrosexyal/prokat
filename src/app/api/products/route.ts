@@ -16,6 +16,7 @@ import type { UserType } from "@/types";
 import { toProductView } from "@/lib/product-mappers";
 import { generateUniqueSlug } from "@/lib/slug";
 import { resolveCity } from "@/lib/cities";
+import { notifyAdmin } from "@/lib/admin-notifications";
 
 const FREE_PRODUCTS_LIMIT = 3;
 const MAX_IMAGES = 10;
@@ -79,7 +80,9 @@ function parseCondition(value: string): ProductCondition {
   return "good";
 }
 
-function parseSpecifications(lines: FormDataEntryValue[]): ProductSpecificationItem[] {
+function parseSpecifications(
+  lines: FormDataEntryValue[],
+): ProductSpecificationItem[] {
   return lines
     .map((item) => String(item).trim())
     .filter(Boolean)
@@ -245,6 +248,16 @@ export async function POST(request: Request) {
     status: "pending",
     ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
   });
+
+  try {
+    await notifyAdmin({
+      title: "Новая заявка на модерацию",
+      body: `${name} · ${session.user.email}`,
+      url: "/admin",
+    });
+  } catch (error) {
+    console.error("Product created, but admin notification failed:", error);
+  }
 
   const serialized: ProductView = toProductView(product);
 

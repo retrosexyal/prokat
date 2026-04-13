@@ -6,19 +6,11 @@ import { cloudinary } from "@/lib/cloudinary";
 import clientPromise from "@/lib/mongodb";
 import { toProductView } from "@/lib/product-mappers";
 import { resolveCity } from "@/lib/cities";
+import { isAdminEmail } from "@/lib/auth";
+import { notifyAdmin } from "@/lib/admin-notifications";
 import type { ProductDoc } from "@/types/product";
 
 const MAX_IMAGES = 10;
-
-function isAdminEmail(email: string | null | undefined): boolean {
-  const adminEmail = process.env.ADMIN_EMAIL;
-
-  if (!adminEmail) {
-    return false;
-  }
-
-  return email?.toLowerCase() === adminEmail.toLowerCase();
-}
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -94,9 +86,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const canEdit =
-    product.ownerEmail === session.user.email ||
-    isAdminEmail(session.user.email);
+  const userIsAdmin = isAdminEmail(session.user.email);
+  const canEdit = product.ownerEmail === session.user.email || userIsAdmin;
 
   if (!canEdit) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -260,6 +251,18 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (!updated) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  if (!userIsAdmin) {
+    try {
+      await notifyAdmin({
+        title: "Товар повторно отправлен на модерацию",
+        body: `${name} · ${session.user.email}`,
+        url: "/admin",
+      });
+    } catch (error) {
+      console.error("Product updated, but admin notification failed:", error);
+    }
   }
 
   return NextResponse.json(toProductView(updated));

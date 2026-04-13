@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { ObjectId } from "mongodb";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import {
@@ -23,6 +23,7 @@ import {
   getBoostDurationLabel,
   getBoostPriceByDuration,
 } from "@/lib/boost-pricing";
+import { notifyAdmin } from "@/lib/admin-notifications";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type {
@@ -341,6 +342,21 @@ export async function POST(request: Request) {
         paymentStubNote: undefined,
       },
     );
+
+    try {
+      const notificationBody =
+        type === "increase_limit"
+          ? `Запрос на повышение лимита на ${requestedLimitIncrease} · ${session.user.email}`
+          : `Заказан буст товара "${product?.name ?? "Без названия"}" · ${session.user.email}`;
+
+      await notifyAdmin({
+        title: "Новая заявка на монетизацию",
+        body: notificationBody,
+        url: "/admin",
+      });
+    } catch (error) {
+      console.error("Monetization request created, but admin notification failed:", error);
+    }
 
     return NextResponse.json(toMonetizationRequestView(updated ?? created), {
       status: 201,
