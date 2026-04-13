@@ -1,18 +1,16 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
-import { LogoutButton } from "@/components/LogoutButton";
 import clientPromise from "@/lib/mongodb";
 import { getProductsByOwner } from "@/lib/products";
 import { toProductViews } from "@/lib/product-mappers";
 import type { UserType } from "@/types";
 import type { ProductDoc, ProductView } from "@/types/product";
-import { UserProductForm } from "./UserProductForm";
 import { getBookingsForOwner } from "@/lib/bookings";
 import { toBookingViews } from "@/lib/booking-mappers";
 import type { BookingView } from "@/types/booking";
-import { ProfileSettings } from "@/components/ProfileSettings";
 import { getAllCategories } from "@/lib/categories";
 import { CategoryDoc } from "@/types/category";
+import { DashboardContent } from "./DashboardContent";
 import { toCategoryView } from "@/lib/category-mappers";
 import { getMonetizationRequestsForUser } from "@/lib/monetization-requests";
 import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
@@ -76,31 +74,17 @@ export default async function DashboardPage() {
   const initialProducts: ProductView[] = toProductViews(myProducts);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-center">Личный кабинет</h1>
-
-      <div className="text-sm text-muted mx-auto flex flex-col gap-2 max-w-sm text-center">
-        {session?.user?.email
-          ? `Вы вошли как ${session.user.email}`
-          : "Вы вошли."}
-        <LogoutButton />
-      </div>
-
-      <ProfileSettings
-        initialName={userProfile.name}
-        initialPhone={userProfile.phone}
-        initialShowPhoneInProducts={userProfile.showPhoneInProducts}
-        initialPickupAddress={userProfile.pickupAddress}
-      />
-
-      <UserProductForm
-        initialProducts={initialProducts}
-        initialBookings={myBookings}
-        initialPickupAddress={userProfile.pickupAddress}
-        categories={categories.map((cat) => toCategoryView(cat))}
-        currentProductLimit={productLimit}
-        initialMonetizationRequests={myMonetizationRequests}
-      />
-    </div>
+    <DashboardContent
+      userEmail={session?.user?.email}
+      initialName={userProfile.name}
+      initialPhone={userProfile.phone}
+      initialShowPhoneInProducts={userProfile.showPhoneInProducts}
+      initialPickupAddress={userProfile.pickupAddress}
+      initialProducts={initialProducts}
+      initialBookings={myBookings}
+      categories={categories.map((cat) => toCategoryView(cat))}
+      currentProductLimit={productLimit}
+      initialMonetizationRequests={myMonetizationRequests}
+    />
   );
 }

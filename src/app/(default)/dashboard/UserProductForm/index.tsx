@@ -25,6 +25,8 @@ import { ProductEditorSection } from "./ProductEditorSection";
 import { BookingsSection } from "./BookingsSection";
 import { ProductListSection } from "./ProductListSection";
 
+type DashboardSection = "editor" | "manage" | "bookings";
+
 type Props = {
   initialProducts: ProductView[];
   initialBookings: BookingView[];
@@ -32,6 +34,8 @@ type Props = {
   categories: CategoryView[];
   currentProductLimit: number;
   initialMonetizationRequests: MonetizationRequestView[];
+  dashboardSection?: DashboardSection;
+  onRequestEditorSection?: () => void;
 };
 
 const MAX_IMAGES = 10;
@@ -43,6 +47,8 @@ export function UserProductForm({
   categories,
   currentProductLimit,
   initialMonetizationRequests,
+  dashboardSection = "manage",
+  onRequestEditorSection,
 }: Props) {
   const router = useRouter();
 
@@ -81,6 +87,9 @@ export function UserProductForm({
 
   const totalImagesCount = existingImages.length + imageFiles.length;
   const isEditing = editingProductId !== null;
+  const showEditorSection = dashboardSection === "editor";
+  const showManageSection = dashboardSection === "manage";
+  const showBookingsSection = dashboardSection === "bookings";
 
   const initialInvoiceState = useMemo(
     () => buildInvoiceState(initialMonetizationRequests),
@@ -122,6 +131,7 @@ export function UserProductForm({
   function startEditing(product: ProductView): void {
     setError("");
     setEditingProductId(product._id ?? null);
+    onRequestEditorSection?.();
 
     setForm({
       name: product.name ?? "",
@@ -513,85 +523,93 @@ export function UserProductForm({
   return (
     <>
       <div className="space-y-8">
-        <ProductEditorSection
-          isEditing={isEditing}
-          form={form}
-          setForm={setForm}
-          categories={categories}
-          existingImages={existingImages}
-          imageFiles={imageFiles}
-          previewUrls={previewUrls}
-          totalImagesCount={totalImagesCount}
-          loading={loading}
-          error={error}
-          submitButtonLabel={submitButtonLabel}
-          onSubmit={handleSubmit}
-          onCancel={resetForm}
-          onFileChange={handleFileChange}
-          onRemoveExistingImage={removeExistingImage}
-          onRemoveSelectedImage={removeSelectedImage}
-          onRemoveAllNewImages={removeAllNewImages}
-        />
+        {showEditorSection ? (
+          <ProductEditorSection
+            isEditing={isEditing}
+            form={form}
+            setForm={setForm}
+            categories={categories}
+            existingImages={existingImages}
+            imageFiles={imageFiles}
+            previewUrls={previewUrls}
+            totalImagesCount={totalImagesCount}
+            loading={loading}
+            error={error}
+            submitButtonLabel={submitButtonLabel}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+            onFileChange={handleFileChange}
+            onRemoveExistingImage={removeExistingImage}
+            onRemoveSelectedImage={removeSelectedImage}
+            onRemoveAllNewImages={removeAllNewImages}
+          />
+        ) : null}
 
-        <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Продвижение и лимиты</h2>
-              <div className="mt-1 text-sm text-zinc-600">
-                Сейчас занято {products.length} из {currentProductLimit}{" "}
-                доступных слотов. Поднятие рейтинга влияет на сортировку товара
-                внутри каталога.
+        {showManageSection ? (
+          <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Продвижение и лимиты</h2>
+                <div className="mt-1 text-sm text-zinc-600">
+                  Сейчас занято {products.length} из {currentProductLimit}{" "}
+                  доступных слотов. Поднятие рейтинга влияет на сортировку товара
+                  внутри каталога.
+                </div>
               </div>
+
+              <Button type="button" onClick={openLimitModal}>
+                Увеличить лимит товаров
+              </Button>
             </div>
 
-            <Button type="button" onClick={openLimitModal}>
-              Увеличить лимит товаров
-            </Button>
-          </div>
+            {monetizationSuccess ? (
+              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {monetizationSuccess}
+              </div>
+            ) : null}
 
-          {monetizationSuccess ? (
-            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {monetizationSuccess}
+            <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
+              После создания услуги формируется реальный счёт Express-Pay. После
+              оплаты администратор сможет завершить применение услуги в панели
+              управления.
             </div>
-          ) : null}
 
-          <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
-            После создания услуги формируется реальный счёт Express-Pay. После
-            оплаты администратор сможет завершить применение услуги в панели
-            управления.
-          </div>
+            {activeLimitInvoice ? (
+              <div className="mt-4">
+                <InvoiceBox
+                  invoice={activeLimitInvoice}
+                  onHide={() => setActiveLimitInvoice(null)}
+                />
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
-          {activeLimitInvoice ? (
-            <div className="mt-4">
-              <InvoiceBox
-                invoice={activeLimitInvoice}
-                onHide={() => setActiveLimitInvoice(null)}
-              />
-            </div>
-          ) : null}
-        </section>
+        {showManageSection ? (
+          <ProductListSection
+            products={products}
+            deletingId={deletingId}
+            productToDelete={productToDelete}
+            activeBoostInvoices={activeBoostInvoices}
+            onDeleteClick={setProductToDelete}
+            onEditClick={startEditing}
+            onBoostClick={openBoostModal}
+            onHideBoostInvoice={(productId) => {
+              setActiveBoostInvoices((prev) => {
+                const next = { ...prev };
+                delete next[productId];
+                return next;
+              });
+            }}
+          />
+        ) : null}
 
-        <ProductListSection
-          products={products}
-          deletingId={deletingId}
-          productToDelete={productToDelete}
-          activeBoostInvoices={activeBoostInvoices}
-          onDeleteClick={setProductToDelete}
-          onEditClick={startEditing}
-          onBoostClick={openBoostModal}
-          onHideBoostInvoice={(productId) => {
-            setActiveBoostInvoices((prev) => {
-              const next = { ...prev };
-              delete next[productId];
-              return next;
-            });
-          }}
-        />
-
-        <BookingsSection
-          bookings={bookings}
-          onStatusChange={handleBookingStatusChange}
-        />
+        {showBookingsSection ? (
+          <BookingsSection
+            bookings={bookings}
+            onStatusChange={handleBookingStatusChange}
+          />
+        ) : null}
       </div>
 
       <MonetizationModal
