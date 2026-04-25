@@ -82,6 +82,7 @@ function buildAvailabilityStages(startOfDay: Date, endOfDay: Date) {
 
 export type GetApprovedProductsWithAvailabilityParams = {
   category?: string;
+  categories?: string[];
   page?: number;
   limit?: number;
   search?: string;
@@ -104,6 +105,9 @@ export async function getApprovedProductsWithAvailability(
   const { startOfDay, endOfDay } = getTodayRange();
 
   const category = params.category?.trim() ?? "";
+  const categories = (params.categories ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean);
   const search = params.search?.trim() ?? "";
   const citySlug = params.citySlug?.trim() ?? "";
   const strictCityOnly = params.strictCityOnly ?? false;
@@ -116,7 +120,9 @@ export async function getApprovedProductsWithAvailability(
     status: "approved",
   };
 
-  if (category) {
+  if (categories.length > 0) {
+    matchStage.category = { $in: categories };
+  } else if (category) {
     matchStage.category = category;
   }
 

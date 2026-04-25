@@ -226,21 +226,18 @@ export default async function RegionCategoryPage({
   const search = resolvedSearchParams?.q?.trim() ?? "";
   const selectedCitySlug = isCitySlug(region) ? region : undefined;
 
-  const result = hasChildren
-    ? {
-        products: [],
-        totalProducts: 0,
-        totalPages: 1,
-        currentPage: 1,
-      }
-    : await getApprovedProductsWithAvailability({
-        category,
-        page: currentPage,
-        limit: PRODUCTS_PER_PAGE,
-        search,
-        citySlug: selectedCitySlug,
-        strictCityOnly: region !== ALL_REGION_SLUG,
-      });
+  const categorySlugsForProducts = hasChildren
+    ? [categoryItem.slug, ...childCategories.map((item) => item.slug)]
+    : [categoryItem.slug];
+
+  const result = await getApprovedProductsWithAvailability({
+    categories: categorySlugsForProducts,
+    page: currentPage,
+    limit: PRODUCTS_PER_PAGE,
+    search,
+    citySlug: selectedCitySlug,
+    strictCityOnly: region !== ALL_REGION_SLUG,
+  });
 
   const { products, totalProducts, totalPages, currentPage: safePage } = result;
 
@@ -412,19 +409,99 @@ export default async function RegionCategoryPage({
             </p>
           </div>
 
-          {!hasChildren ? (
-            <div className="text-sm text-zinc-500">
-              Найдено: {totalProducts} позиций
+          <div className="text-sm text-zinc-500">
+            Найдено: {totalProducts} позиций
+            {hasChildren ? ` • Подкатегорий: ${childCategories.length}` : ""}
+          </div>
+        </div>
+      </section>
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
+          <h2 className="text-xl font-semibold text-zinc-900">
+            Товары категории
+          </h2>
+          {search ? (
+            <p className="mt-1 text-sm text-zinc-500">Поиск: {search}</p>
+          ) : (
+            <p className="mt-1 text-sm text-zinc-500">
+              Актуальные предложения в категории{" "}
+              {categoryItem.h1?.trim() || categoryItem.name}.
+            </p>
+          )}
+        </div>
+
+        <div className="px-4 py-4 sm:px-5">
+          {products.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+              <p className="text-sm text-zinc-600">
+                В этой категории пока нет товаров
+              </p>
             </div>
           ) : (
-            <div className="text-sm text-zinc-500">
-              Подкатегорий: {childCategories.length}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard
+                  key={product._id?.toString() ?? product.slug}
+                  name={product.name}
+                  slug={product.slug}
+                  category={product.category}
+                  citySlug={product.citySlug}
+                  images={product.images}
+                  pricePerDay={product.pricePerDayBYN}
+                  available={product.isAvailableNow}
+                  minDays={product.minDays ?? 1}
+                  productId={product._id?.toString() || ""}
+                  pickupAddress={product.pickupAddress}
+                  ownerPhone={product.ownerPhone || ""}
+                  ratingBoost={product.ratingBoost}
+                />
+              ))}
             </div>
           )}
         </div>
+
+        <div className="border-t border-zinc-100 px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-zinc-500">
+              Страница {safePage} из {totalPages}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href={buildCategoryHref({
+                  q: search,
+                  page: Math.max(safePage - 1, 1),
+                })}
+                aria-disabled={safePage <= 1}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  safePage <= 1
+                    ? "pointer-events-none border border-zinc-200 bg-zinc-100 text-zinc-400"
+                    : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Назад
+              </Link>
+
+              <Link
+                href={buildCategoryHref({
+                  q: search,
+                  page: Math.min(safePage + 1, totalPages),
+                })}
+                aria-disabled={safePage >= totalPages}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  safePage >= totalPages
+                    ? "pointer-events-none border border-zinc-200 bg-zinc-100 text-zinc-400"
+                    : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Вперёд
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {hasChildren ? (
+      {hasChildren && (
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
             <h2 className="text-xl font-semibold text-zinc-900">
@@ -452,92 +529,6 @@ export default async function RegionCategoryPage({
                 </div>
               </Link>
             ))}
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-100 px-4 py-4 sm:px-5">
-            <h2 className="text-xl font-semibold text-zinc-900">
-              Товары категории
-            </h2>
-            {search ? (
-              <p className="mt-1 text-sm text-zinc-500">Поиск: {search}</p>
-            ) : (
-              <p className="mt-1 text-sm text-zinc-500">
-                Актуальные предложения в категории{" "}
-                {categoryItem.h1?.trim() || categoryItem.name}.
-              </p>
-            )}
-          </div>
-
-          <div className="px-4 py-4 sm:px-5">
-            {products.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
-                <p className="text-sm text-zinc-600">
-                  В этой категории пока нет товаров
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
-                {products.map((product) => (
-                  <ProductCard
-                    key={product._id?.toString() ?? product.slug}
-                    name={product.name}
-                    slug={product.slug}
-                    category={product.category}
-                    citySlug={product.citySlug}
-                    images={product.images}
-                    pricePerDay={product.pricePerDayBYN}
-                    available={product.isAvailableNow}
-                    minDays={product.minDays ?? 1}
-                    productId={product._id?.toString() || ""}
-                    pickupAddress={product.pickupAddress}
-                    ownerPhone={product.ownerPhone || ""}
-                    ratingBoost={product.ratingBoost}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-zinc-100 px-4 py-4 sm:px-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-zinc-500">
-                Страница {safePage} из {totalPages}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  href={buildCategoryHref({
-                    q: search,
-                    page: Math.max(safePage - 1, 1),
-                  })}
-                  aria-disabled={safePage <= 1}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    safePage <= 1
-                      ? "pointer-events-none border border-zinc-200 bg-zinc-100 text-zinc-400"
-                      : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                  }`}
-                >
-                  Назад
-                </Link>
-
-                <Link
-                  href={buildCategoryHref({
-                    q: search,
-                    page: Math.min(safePage + 1, totalPages),
-                  })}
-                  aria-disabled={safePage >= totalPages}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    safePage >= totalPages
-                      ? "pointer-events-none border border-zinc-200 bg-zinc-100 text-zinc-400"
-                      : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                  }`}
-                >
-                  Вперёд
-                </Link>
-              </div>
-            </div>
           </div>
         </section>
       )}
