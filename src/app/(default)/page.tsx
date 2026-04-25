@@ -269,6 +269,8 @@ export default async function HomePage() {
                 category={p.category}
                 citySlug={p.citySlug}
                 ratingBoost={p.ratingBoost}
+                pricePerWeek={p.pricePerWeekBYN}
+                pricePerMonth={p.pricePerMonthBYN}
               />
             ))}
           </div>

@@ -16,6 +16,8 @@ export type ProductFormValues = {
 
   depositBYN: number;
   pricePerDayBYN: number;
+  pricePerWeekBYN: number;
+  pricePerMonthBYN: number;
   minDays: number;
   quantity: number;
 
@@ -44,6 +46,8 @@ export const emptyProductForm: ProductFormValues = {
 
   depositBYN: 0,
   pricePerDayBYN: 0,
+  pricePerWeekBYN: 0,
+  pricePerMonthBYN: 0,
   minDays: 1,
   quantity: 1,
 

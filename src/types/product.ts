@@ -34,6 +34,8 @@ export type ProductDoc = {
 
   depositBYN: number;
   pricePerDayBYN: number;
+  pricePerWeekBYN?: number;
+  pricePerMonthBYN?: number;
   minDays: number;
   quantity: number;
 
@@ -81,6 +83,8 @@ export type ProductView = {
 
   depositBYN: number;
   pricePerDayBYN: number;
+  pricePerWeekBYN?: number;
+  pricePerMonthBYN?: number;
   minDays: number;
   quantity: number;
 

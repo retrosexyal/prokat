@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 

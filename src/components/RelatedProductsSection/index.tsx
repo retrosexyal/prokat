@@ -60,6 +60,8 @@ export function RelatedProductsSection({
               ownerPhone={item.ownerPhone}
               pickupAddress={item.pickupAddress}
               ratingBoost={item.ratingBoost}
+              pricePerWeek={item.pricePerWeekBYN}
+              pricePerMonth={item.pricePerMonthBYN}
             />
           ))}
         </div>

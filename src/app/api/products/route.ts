@@ -120,7 +120,9 @@ export async function POST(request: Request) {
   const formData = await request.formData();
 
   const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "").trim() as ProductDoc["category"];
+  const category = String(
+    formData.get("category") ?? "",
+  ).trim() as ProductDoc["category"];
 
   const short = String(formData.get("short") ?? "").trim();
   const fullDescription = String(formData.get("fullDescription") ?? "").trim();
@@ -128,10 +130,14 @@ export async function POST(request: Request) {
   const organization = String(formData.get("organization") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
   const model = String(formData.get("model") ?? "").trim();
-  const condition = parseCondition(String(formData.get("condition") ?? "").trim());
+  const condition = parseCondition(
+    String(formData.get("condition") ?? "").trim(),
+  );
 
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
+  const pricePerWeekBYN = Number(formData.get("pricePerWeekBYN") ?? 0);
+  const pricePerMonthBYN = Number(formData.get("pricePerMonthBYN") ?? 0);
   const minDays = Number(formData.get("minDays") ?? 1);
   const quantity = Number(formData.get("quantity") ?? 1);
 
@@ -139,7 +145,8 @@ export async function POST(request: Request) {
   const rawCitySlug = String(formData.get("citySlug") ?? "").trim();
 
   const pickupAddress = String(formData.get("pickupAddress") ?? "").trim();
-  const deliveryAvailable = String(formData.get("deliveryAvailable") ?? "") === "true";
+  const deliveryAvailable =
+    String(formData.get("deliveryAvailable") ?? "") === "true";
 
   const kitIncluded = formData
     .getAll("kitIncluded")
@@ -164,6 +171,8 @@ export async function POST(request: Request) {
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
     Number.isNaN(minDays) ||
+    Number.isNaN(pricePerWeekBYN) ||
+    Number.isNaN(pricePerMonthBYN) ||
     Number.isNaN(quantity)
   ) {
     return NextResponse.json(
@@ -247,6 +256,8 @@ export async function POST(request: Request) {
     imagePublicIds,
     status: "pending",
     ownerPhone: user.showPhoneInProducts ? user.phone : undefined,
+    pricePerWeekBYN: pricePerWeekBYN > 0 ? pricePerWeekBYN : undefined,
+    pricePerMonthBYN: pricePerMonthBYN > 0 ? pricePerMonthBYN : undefined,
   });
 
   try {

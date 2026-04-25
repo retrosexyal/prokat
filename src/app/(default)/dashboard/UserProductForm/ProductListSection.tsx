@@ -113,6 +113,8 @@ export function ProductListSection({
                   productId={product._id?.toString() || ""}
                   ratingBoost={product.ratingBoost}
                   isHideButton
+                  pricePerWeek={product.pricePerWeekBYN}
+                  pricePerMonth={product.pricePerMonthBYN}
                 />
               </div>
 

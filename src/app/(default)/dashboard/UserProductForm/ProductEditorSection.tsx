@@ -301,6 +301,42 @@ export function ProductEditorSection({
         </label>
 
         <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Цена за неделю (BYN)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.pricePerWeekBYN}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                pricePerWeekBYN: Number(event.target.value),
+              }))
+            }
+            placeholder="Необязательно"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
+          Цена за месяц (BYN)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            className="rounded-md border px-2 py-1.5 text-sm"
+            value={form.pricePerMonthBYN}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                pricePerMonthBYN: Number(event.target.value),
+              }))
+            }
+            placeholder="Необязательно"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs sm:text-sm">
           Залог (BYN)
           <input
             type="number"

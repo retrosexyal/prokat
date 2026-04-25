@@ -113,6 +113,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   const organization = String(formData.get("organization") ?? "").trim();
   const depositBYN = Number(formData.get("depositBYN") ?? 0);
   const pricePerDayBYN = Number(formData.get("pricePerDayBYN") ?? 0);
+  const pricePerWeekBYN = Number(formData.get("pricePerWeekBYN") ?? 0);
+  const pricePerMonthBYN = Number(formData.get("pricePerMonthBYN") ?? 0);
   const minDays = Number(formData.get("minDays") ?? 1);
   const quantity = Number(formData.get("quantity") ?? 1);
   const rawCity = String(formData.get("city") ?? "").trim();
@@ -173,6 +175,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
     Number.isNaN(minDays) ||
+    Number.isNaN(pricePerWeekBYN) ||
+    Number.isNaN(pricePerMonthBYN) ||
     Number.isNaN(quantity)
   ) {
     return NextResponse.json(
@@ -244,6 +248,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         imagePublicIds: nextImagePublicIds,
         status: "pending",
         updatedAt: new Date(),
+        pricePerWeekBYN: pricePerWeekBYN > 0 ? pricePerWeekBYN : undefined,
+        pricePerMonthBYN: pricePerMonthBYN > 0 ? pricePerMonthBYN : undefined,
       },
     },
     { returnDocument: "after" },

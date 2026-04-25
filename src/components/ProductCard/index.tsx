@@ -19,6 +19,8 @@ type Props = {
   citySlug: CitySlug;
   images?: string[];
   pricePerDay: number;
+  pricePerWeek?: number;
+  pricePerMonth?: number;
   minDays: number;
   available: boolean;
   ownerPhone?: string;
@@ -50,6 +52,8 @@ export function ProductCard({
   ownerPhone,
   isHideButton,
   pickupAddress,
+  pricePerWeek,
+  pricePerMonth,
   ratingBoost = 0,
 }: Props) {
   const normalizedImages = useMemo(() => {
@@ -148,12 +152,18 @@ export function ProductCard({
 
             <div className="mt-2 space-y-1 text-sm text-zinc-500">
               <p>Минимум {minDays} дн.</p>
-              {shortAddress ? <p className="line-clamp-2">{shortAddress}</p> : null}
+              {shortAddress ? (
+                <p className="line-clamp-2">{shortAddress}</p>
+              ) : null}
             </div>
           </div>
 
           <div className="mt-3">
-            <PriceBlock pricePerDay={pricePerDay} />
+            <PriceBlock
+              pricePerDay={pricePerDay}
+              pricePerWeek={pricePerWeek}
+              pricePerMonth={pricePerMonth}
+            />
           </div>
 
           <div className="mt-auto flex items-center justify-between gap-2 pt-4">

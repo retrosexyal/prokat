@@ -1,6 +1,7 @@
 import { ProductBookingForm } from "@/components/ProductBookingForm";
 import type { ProductDoc } from "@/types/product";
 import { getConditionLabel } from "./utils";
+import { PriceBlock } from "@/components/PriceBlock";
 
 type Props = {
   product: ProductDoc;
@@ -17,12 +18,11 @@ export function ProductSidebar({ product }: Props) {
           Тариф аренды
         </h2>
 
-        <div className="flex items-end gap-2">
-          <span className="text-3xl font-bold text-zinc-900">
-            {product.pricePerDayBYN} BYN
-          </span>
-          <span className="pb-1 text-sm text-zinc-500">/ сутки</span>
-        </div>
+        <PriceBlock
+          pricePerDay={product.pricePerDayBYN}
+          pricePerWeek={product.pricePerWeekBYN}
+          pricePerMonth={product.pricePerMonthBYN}
+        />
 
         <p className="mt-3 text-sm text-zinc-600">
           Минимум {product.minDays} дн.
@@ -47,7 +47,9 @@ export function ProductSidebar({ product }: Props) {
         {product.pickupAddress && (
           <div className="mt-2">
             <p className="mt-1 text-sm text-zinc-600">Адрес самовывоза:</p>
-            <p className="mt-1 text-sm text-zinc-700">{product.pickupAddress}</p>
+            <p className="mt-1 text-sm text-zinc-700">
+              {product.pickupAddress}
+            </p>
           </div>
         )}
 

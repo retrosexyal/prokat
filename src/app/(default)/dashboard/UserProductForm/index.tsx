@@ -69,7 +69,9 @@ export function UserProductForm({
     null,
   );
   const [bookings, setBookings] = useState<BookingView[]>(initialBookings);
-  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(
+    null,
+  );
 
   const [monetizationModal, setMonetizationModal] =
     useState<MonetizationModalState>({
@@ -149,6 +151,8 @@ export function UserProductForm({
 
       depositBYN: product.depositBYN ?? 0,
       pricePerDayBYN: product.pricePerDayBYN ?? 0,
+      pricePerWeekBYN: product.pricePerWeekBYN ?? 0,
+      pricePerMonthBYN: product.pricePerMonthBYN ?? 0,
       minDays: product.minDays ?? 1,
       quantity: product.quantity ?? 1,
 
@@ -241,6 +245,8 @@ export function UserProductForm({
       formData.append("organization", form.organization);
       formData.append("depositBYN", String(form.depositBYN));
       formData.append("pricePerDayBYN", String(form.pricePerDayBYN));
+      formData.append("pricePerWeekBYN", String(form.pricePerWeekBYN));
+      formData.append("pricePerMonthBYN", String(form.pricePerMonthBYN));
       formData.append("minDays", String(form.minDays));
       formData.append("city", form.city);
       formData.append("pickupAddress", form.pickupAddress);
@@ -304,11 +310,15 @@ export function UserProductForm({
           ),
         );
       } else {
-        const response = await api.post<ProductView>(API_ROUTES.products, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
+        const response = await api.post<ProductView>(
+          API_ROUTES.products,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
           },
-        });
+        );
 
         setProducts((prev) => [response.data, ...prev]);
       }
@@ -459,7 +469,9 @@ export function UserProductForm({
     try {
       await api.delete(API_ROUTES.bookingById(bookingId));
 
-      setBookings((prev) => prev.filter((booking) => booking._id !== bookingId));
+      setBookings((prev) =>
+        prev.filter((booking) => booking._id !== bookingId),
+      );
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка удаления бронирования"));
@@ -565,8 +577,8 @@ export function UserProductForm({
                 <h2 className="text-xl font-semibold">Продвижение и лимиты</h2>
                 <div className="mt-1 text-sm text-zinc-600">
                   Сейчас занято {products.length} из {currentProductLimit}{" "}
-                  доступных слотов. Поднятие рейтинга влияет на сортировку товара
-                  внутри каталога.
+                  доступных слотов. Поднятие рейтинга влияет на сортировку
+                  товара внутри каталога.
                 </div>
               </div>
 

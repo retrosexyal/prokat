@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ProductGallery } from "@/components/ProductGallery";
 import type { ProductDoc } from "@/types/product";
 import { getConditionLabel } from "./utils";
+import { PriceBlock } from "@/components/PriceBlock";
 
 type Props = {
   product: ProductDoc;
@@ -73,12 +74,11 @@ export function ProductHeroSection({
           </div>
 
           <div className="rounded-xl bg-zinc-50 p-4">
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-zinc-900">
-                {product.pricePerDayBYN} BYN
-              </span>
-              <span className="pb-1 text-sm text-zinc-500">/ сутки</span>
-            </div>
+            <PriceBlock
+              pricePerDay={product.pricePerDayBYN}
+              pricePerWeek={product.pricePerWeekBYN}
+              pricePerMonth={product.pricePerMonthBYN}
+            />
 
             <p className="mt-2 text-sm text-zinc-600">
               Минимальный срок аренды: {product.minDays} дн.
@@ -147,21 +147,14 @@ export function ProductHeroSection({
                 </div>
               ) : null}
 
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-zinc-400">
-                  Цена за сутки
-                </dt>
-                <dd className="mt-1 text-zinc-800">
-                  {product.pricePerDayBYN} BYN
-                </dd>
-              </div>
-
               {!!product.depositBYN && (
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-zinc-400">
                     Залог
                   </dt>
-                  <dd className="mt-1 text-zinc-800">{product.depositBYN} BYN</dd>
+                  <dd className="mt-1 text-zinc-800">
+                    {product.depositBYN} BYN
+                  </dd>
                 </div>
               )}
 
@@ -204,7 +197,9 @@ export function ProductHeroSection({
                   <dt className="text-xs uppercase tracking-wide text-zinc-400">
                     Адрес самовывоза
                   </dt>
-                  <dd className="mt-1 text-zinc-800">{product.pickupAddress}</dd>
+                  <dd className="mt-1 text-zinc-800">
+                    {product.pickupAddress}
+                  </dd>
                 </div>
               ) : null}
             </dl>

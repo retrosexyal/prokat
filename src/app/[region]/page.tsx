@@ -311,6 +311,8 @@ export default async function RegionPage({ params, searchParams }: Props) {
                   pickupAddress={product.pickupAddress}
                   ownerPhone={product.ownerPhone || ""}
                   ratingBoost={product.ratingBoost}
+                  pricePerWeek={product.pricePerWeekBYN}
+                  pricePerMonth={product.pricePerMonthBYN}
                 />
               ))}
             </div>

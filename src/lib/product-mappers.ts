@@ -20,6 +20,8 @@ export function toProductView(product: ProductDoc): ProductView {
 
     depositBYN: product.depositBYN,
     pricePerDayBYN: product.pricePerDayBYN,
+    pricePerWeekBYN: product.pricePerWeekBYN,
+    pricePerMonthBYN: product.pricePerMonthBYN,
     minDays: product.minDays,
     quantity: product.quantity ?? 1,
 
