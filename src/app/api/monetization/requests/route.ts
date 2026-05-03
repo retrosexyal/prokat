@@ -321,7 +321,7 @@ export async function POST(request: Request) {
   const paymentExpiresAt = new Date(Date.now() + PAYMENT_LIFETIME_MS);
 
   try {
-    const invoice = await createExpressPayInvoice({
+    /* const invoice = await createExpressPayInvoice({
       accountNo,
       amount: paymentAmountBYN,
       info,
@@ -341,7 +341,7 @@ export async function POST(request: Request) {
         paymentError: undefined,
         paymentStubNote: undefined,
       },
-    );
+    ); */
 
     try {
       const notificationBody =
@@ -358,7 +358,7 @@ export async function POST(request: Request) {
       console.error("Monetization request created, but admin notification failed:", error);
     }
 
-    return NextResponse.json(toMonetizationRequestView(updated ?? created), {
+    return NextResponse.json(toMonetizationRequestView(/* updated ??  */created), {
       status: 201,
     });
   } catch (error: unknown) {

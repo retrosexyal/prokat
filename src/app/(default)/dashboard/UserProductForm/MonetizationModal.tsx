@@ -59,22 +59,24 @@ export function MonetizationModal({
         <div className="text-sm text-zinc-600">
           {state.type === "boost_product" ? (
             <>
-              Выберите срок платного повышения рейтинга. Значение повышения
-              фиксированное и составляет +{BOOST_FIXED_VALUE}.
+              Выберите срок платного повышения рейтинга.{" "}
+              {/* Значение повышения
+              фиксированное и составляет +{BOOST_FIXED_VALUE}. */}
             </>
           ) : (
             <>
-              Отправь заявку на увеличение лимита товаров. После отправки
-              система сразу сформирует счёт через Express-Pay / ЕРИП.
+              Отправь заявку на увеличение лимита товаров.{" "}
+              {/* После отправки
+              система сразу сформирует счёт через Express-Pay / ЕРИП. */}
             </>
           )}
         </div>
 
         {state.type === "boost_product" ? (
           <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-            <div className="text-sm font-medium text-zinc-900">
+            {/* <div className="text-sm font-medium text-zinc-900">
               Фиксированный буст: +{BOOST_FIXED_VALUE} к рейтингу
-            </div>
+            </div> */}
 
             <label className="flex flex-col gap-1 text-sm">
               Срок действия буста
@@ -86,19 +88,20 @@ export function MonetizationModal({
                 }
               >
                 <option value="week">Неделя</option>
-                <option value="month">Месяц</option>
-                <option value="year">Год</option>
+                {/* <option value="month">Месяц</option>
+                <option value="year">Год</option> */}
               </select>
             </label>
 
             <div className="rounded-lg bg-white/80 px-3 py-2 text-sm text-zinc-700">
               Стоимость:{" "}
               <span className="font-semibold">
-                {getBoostPriceByDuration(boostDuration).toFixed(2)} BYN
+                {/* {getBoostPriceByDuration(boostDuration).toFixed(2)} BYN */}
+                бессплатно
               </span>
               <div className="mt-1 text-xs text-zinc-500">
                 Срок: {getBoostDurationLabel(boostDuration)} · повышение
-                рейтинга применяет администратор после оплаты.
+                рейтинга применяет администратор {/* после оплаты. */}
               </div>
             </div>
           </div>
@@ -110,6 +113,7 @@ export function MonetizationModal({
               min={1}
               className="rounded-md border px-3 py-2 text-sm"
               value={requestedLimitIncrease}
+              disabled
               onChange={(event) =>
                 setRequestedLimitIncrease(
                   Math.max(1, Number(event.target.value) || 1),
@@ -130,11 +134,11 @@ export function MonetizationModal({
           />
         </label>
 
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        {/* <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           После отправки система сразу создаст счёт в Express-Pay. Сама услуга
           применяется после подтверждения факта оплаты в административной
           панели.
-        </div>
+        </div> */}
 
         {monetizationInvoice ? (
           <InvoiceBox

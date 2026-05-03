@@ -410,7 +410,7 @@ export function UserProductForm({
     setMonetizationLoading(true);
 
     try {
-      const response = await api.post<MonetizationRequestView>(
+      /* const response = */ await api.post<MonetizationRequestView>(
         API_ROUTES.monetizationRequests,
         {
           type: monetizationModal.type,
@@ -421,9 +421,16 @@ export function UserProductForm({
         },
       );
 
-      setMonetizationInvoice(response.data);
+      setMonetizationSuccess("Заявка успешно отправлена.");
+      setMonetizationModal((prev) => ({
+        ...prev,
+        open: false,
+        product: null,
+      }));
+
+      /*  setMonetizationInvoice(response.data);
       storeActiveInvoice(response.data);
-      setMonetizationSuccess("Счёт создан. Данные для оплаты показаны ниже.");
+      setMonetizationSuccess("Счёт создан. Данные для оплаты показаны ниже."); */
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка отправки заявки"));
     } finally {
@@ -593,11 +600,11 @@ export function UserProductForm({
               </div>
             ) : null}
 
-            <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
+            {/* <div className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-zinc-600">
               После создания услуги формируется реальный счёт Express-Pay. После
               оплаты администратор сможет завершить применение услуги в панели
               управления.
-            </div>
+            </div> */}
 
             {activeLimitInvoice ? (
               <div className="mt-4">
