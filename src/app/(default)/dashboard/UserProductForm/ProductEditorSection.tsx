@@ -72,6 +72,31 @@ export function ProductEditorSection({
       });
   }, [categories]);
 
+  function getKitItems(): string[] {
+    return form.kitIncludedText ? form.kitIncludedText.split("\n") : [""];
+  }
+
+  function updateKitItem(index: number, value: string): void {
+    const items = getKitItems();
+    items[index] = value;
+    setForm((prev) => ({ ...prev, kitIncludedText: items.join("\n") }));
+  }
+
+  function addKitItem(): void {
+    setForm((prev) => ({
+      ...prev,
+      kitIncludedText: [...getKitItems(), ""].join("\n"),
+    }));
+  }
+
+  function removeKitItem(index: number): void {
+    const items = getKitItems().filter((_, itemIndex) => itemIndex !== index);
+    setForm((prev) => ({
+      ...prev,
+      kitIncludedText: items.length > 0 ? items.join("\n") : "",
+    }));
+  }
+
   const hasCurrentCategoryInOptions = selectableCategories.some(
     (category) => category.slug === form.category,
   );
@@ -90,6 +115,118 @@ export function ProductEditorSection({
     return `${parent.name} → ${category.name}`;
   }
 
+  function getSpecificationItems(): { label: string; value: string }[] {
+    const lines = form.specificationsText
+      ? form.specificationsText.split("\n")
+      : [""];
+
+    return lines.map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex === -1) return { label: line, value: "" };
+
+      return {
+        label: line.slice(0, separatorIndex).trim(),
+        value: line.slice(separatorIndex + 1).trim(),
+      };
+    });
+  }
+
+  function serializeSpecificationItems(
+    items: { label: string; value: string }[],
+  ): string {
+    return items
+      .map((item) => {
+        if (!item.label && !item.value) return "";
+        if (!item.value) return item.label;
+        return `${item.label}: ${item.value}`;
+      })
+      .join("\n");
+  }
+
+  function updateSpecificationItem(
+    index: number,
+    field: "label" | "value",
+    value: string,
+  ): void {
+    const items = getSpecificationItems();
+    items[index] = { ...items[index], [field]: value };
+
+    setForm((prev) => ({
+      ...prev,
+      specificationsText: serializeSpecificationItems(items),
+    }));
+  }
+
+  function addSpecificationItem(): void {
+    setForm((prev) => ({
+      ...prev,
+      specificationsText: `${serializeSpecificationItems(
+        getSpecificationItems(),
+      )}\n`,
+    }));
+  }
+
+  function removeSpecificationItem(index: number): void {
+    const items = getSpecificationItems().filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      specificationsText: serializeSpecificationItems(items),
+    }));
+  }
+
+  function getFaqItems(): { question: string; answer: string }[] {
+    const lines = form.faqText ? form.faqText.split("\n") : [""];
+
+    return lines.map((line) => {
+      const [question = "", answer = ""] = line.split("||");
+      return { question: question.trim(), answer: answer.trim() };
+    });
+  }
+
+  function serializeFaqItems(
+    items: { question: string; answer: string }[],
+  ): string {
+    return items
+      .map((item) => {
+        if (!item.question && !item.answer) return "";
+        return `${item.question} || ${item.answer}`;
+      })
+      .join("\n");
+  }
+
+  function updateFaqItem(
+    index: number,
+    field: "question" | "answer",
+    value: string,
+  ): void {
+    const items = getFaqItems();
+    items[index] = { ...items[index], [field]: value };
+
+    setForm((prev) => ({
+      ...prev,
+      faqText: serializeFaqItems(items),
+    }));
+  }
+
+  function addFaqItem(): void {
+    setForm((prev) => ({
+      ...prev,
+      faqText: `${serializeFaqItems(getFaqItems())}\n`,
+    }));
+  }
+
+  function removeFaqItem(index: number): void {
+    const items = getFaqItems().filter((_, itemIndex) => itemIndex !== index);
+
+    setForm((prev) => ({
+      ...prev,
+      faqText: serializeFaqItems(items),
+    }));
+  }
+
   return (
     <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
       <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
@@ -102,7 +239,10 @@ export function ProductEditorSection({
           : "Заполните поля и отправьте товар на модерацию."}
       </p>
 
-      <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
+      <form
+        onSubmit={onSubmit}
+        className="grid grid-cols-1 gap-3 md:grid-cols-2"
+      >
         <label className="flex flex-col gap-1 text-xs sm:text-sm">
           Название
           <input
@@ -390,53 +530,142 @@ export function ProductEditorSection({
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
-          Комплект
-          <textarea
-            className="rounded-md border px-2 py-1.5 text-sm"
-            rows={4}
-            value={form.kitIncludedText}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                kitIncludedText: event.target.value,
-              }))
-            }
-            placeholder={`Каждый пункт с новой строки:\nДрель\nКейс\nЗарядка\n2 аккумулятора`}
-          />
-        </label>
+        <div className="flex flex-col gap-2 text-xs md:col-span-2 sm:text-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>Комплект</span>
+            <button
+              type="button"
+              className="w-full rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 md:w-auto"
+              onClick={addKitItem}
+            >
+              + Добавить предмет
+            </button>
+          </div>
 
-        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
-          Характеристики
-          <textarea
-            className="rounded-md border px-2 py-1.5 text-sm"
-            rows={5}
-            value={form.specificationsText}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                specificationsText: event.target.value,
-              }))
-            }
-            placeholder={`Каждая характеристика с новой строки в формате:\nМощность: 600 Вт\nПитание: от сети\nВес: 1.8 кг`}
-          />
-        </label>
+          <div className="space-y-2">
+            {getKitItems().map((item, index) => (
+              <div
+                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
+                key={`kit-${index}`}
+              >
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm"
+                  value={item}
+                  onChange={(event) => updateKitItem(index, event.target.value)}
+                  placeholder="Например: Кейс"
+                />
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-border-subtle px-3 py-1.5 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                  onClick={() => removeKitItem(index)}
+                  disabled={getKitItems().length === 1 && !item}
+                >
+                  Удалить
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
-          FAQ для карточки
-          <textarea
-            className="rounded-md border px-2 py-1.5 text-sm"
-            rows={6}
-            value={form.faqText}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                faqText: event.target.value,
-              }))
-            }
-            placeholder={`Каждый вопрос и ответ через "||", с новой строки:\nДля чего подходит дрель? || Для сверления дерева, металла и бытовых задач.\nЧто входит в комплект? || Кейс, зарядка и аккумуляторы.`}
-          />
-        </label>
+        <div className="flex flex-col gap-2 text-xs md:col-span-2 sm:text-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>Характеристики</span>
+            <button
+              type="button"
+              className="w-full rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 md:w-auto"
+              onClick={addSpecificationItem}
+            >
+              + Добавить характеристику
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {getSpecificationItems().map((item, index) => (
+              <div
+                className="grid gap-2 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1fr)_auto]"
+                key={`specification-${index}`}
+              >
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm"
+                  value={item.label}
+                  onChange={(event) =>
+                    updateSpecificationItem(index, "label", event.target.value)
+                  }
+                  placeholder="Название, например: Мощность"
+                />
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm"
+                  value={item.value}
+                  onChange={(event) =>
+                    updateSpecificationItem(index, "value", event.target.value)
+                  }
+                  placeholder="Описание, например: 600 Вт"
+                />
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-border-subtle px-3 py-1.5 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                  onClick={() => removeSpecificationItem(index)}
+                  disabled={
+                    getSpecificationItems().length === 1 &&
+                    !item.label &&
+                    !item.value
+                  }
+                >
+                  Удалить
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 text-xs md:col-span-2 sm:text-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>FAQ для карточки</span>
+            <button
+              type="button"
+              className="w-full rounded-full border border-border-subtle px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 md:w-auto"
+              onClick={addFaqItem}
+            >
+              + Добавить вопрос
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {getFaqItems().map((item, index) => (
+              <div
+                className="grid gap-2 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_auto]"
+                key={`faq-${index}`}
+              >
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm"
+                  value={item.question}
+                  onChange={(event) =>
+                    updateFaqItem(index, "question", event.target.value)
+                  }
+                  placeholder="Вопрос"
+                />
+                <input
+                  className="rounded-md border px-2 py-1.5 text-sm"
+                  value={item.answer}
+                  onChange={(event) =>
+                    updateFaqItem(index, "answer", event.target.value)
+                  }
+                  placeholder="Ответ"
+                />
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-border-subtle px-3 py-1.5 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                  onClick={() => removeFaqItem(index)}
+                  disabled={
+                    getFaqItems().length === 1 && !item.question && !item.answer
+                  }
+                >
+                  Удалить
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2 text-xs sm:text-sm sm:col-span-2">
           <span>Изображения (до {MAX_IMAGES})</span>

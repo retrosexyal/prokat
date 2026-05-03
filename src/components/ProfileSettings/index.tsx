@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
@@ -31,6 +31,11 @@ export function ProfileSettings({
   initialPickupAddress = "",
 }: Props) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone);
@@ -137,8 +142,12 @@ export function ProfileSettings({
         </form>
       </section>
 
-      <PwaInstallPrompt />
-      <PushNotificationsSettings />
+      {mounted ? (
+        <>
+          <PwaInstallPrompt />
+          <PushNotificationsSettings />
+        </>
+      ) : null}
     </div>
   );
 }
