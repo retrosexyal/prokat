@@ -6,6 +6,8 @@ import bcrypt from "bcrypt";
 import { sendVerifyEmail } from "@/lib/sendVerifyEmail";
 import { UserType } from "@/types";
 
+const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -87,16 +89,25 @@ export const authOptions: NextAuthOptions = {
       const existingUser = await users.findOne({ email });
 
       if (!existingUser) {
+        const now = new Date();
+
         await users.insertOne({
           email,
           name: user.name ?? "",
           image: user.image ?? "",
           verified: true,
           provider: "google",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: now,
+          updatedAt: now,
+
+          acceptedUserAgreement: true,
+          acceptedPrivacyPolicy: true,
+          legalDocumentsVersion: LEGAL_DOCUMENTS_VERSION,
+          legalAcceptedAt: now,
         });
       } else {
+        const now = new Date();
+
         await users.updateOne(
           { email },
           {
@@ -104,7 +115,13 @@ export const authOptions: NextAuthOptions = {
               name: user.name ?? existingUser.name ?? "",
               image: user.image ?? existingUser.image ?? "",
               verified: true,
-              updatedAt: new Date(),
+              updatedAt: now,
+            },
+            $setOnInsert: {
+              acceptedUserAgreement: true,
+              acceptedPrivacyPolicy: true,
+              legalDocumentsVersion: LEGAL_DOCUMENTS_VERSION,
+              legalAcceptedAt: now,
             },
           },
         );

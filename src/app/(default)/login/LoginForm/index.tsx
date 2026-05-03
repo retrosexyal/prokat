@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { LegalConsent } from "@/components/LegalConsent";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedGoogleLegal, setAcceptedGoogleLegal] = useState(false);
   const [err, setErr] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,13 +73,22 @@ export default function LoginForm() {
   }
 
   async function onGoogleLogin() {
+    setErr("");
+
+    if (!acceptedGoogleLegal) {
+      setErr(
+        "Перед входом через Google подтвердите ознакомление с Пользовательским соглашением и Политикой обработки персональных данных.",
+      );
+      return;
+    }
+
     await signIn("google", { callbackUrl });
   }
 
   return (
     <form
       onSubmit={onSubmit}
-      className="flex flex-1 flex-col gap-3 p-4 mx-auto w-full max-w-md"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 p-4"
     >
       <div className="mb-2 text-center">
         <h1 className="text-2xl font-semibold text-zinc-900">Вход</h1>
@@ -86,9 +97,17 @@ export default function LoginForm() {
         </p>
       </div>
 
+      <LegalConsent
+        checked={acceptedGoogleLegal}
+        onChange={setAcceptedGoogleLegal}
+        id="google-legal-consent"
+        label="Перед входом или регистрацией через Google я ознакомлен(а) и согласен(на) с документами сайта."
+      />
+
       <Button
         type="button"
         onClick={onGoogleLogin}
+        disabled={!acceptedGoogleLegal}
         newClasses="flex items-center justify-center gap-3
     w-full h-14
     rounded-full
@@ -97,7 +116,8 @@ export default function LoginForm() {
     hover:bg-zinc-50 hover:border-zinc-400
     transition-colors duration-200
     shadow-sm
-    font-medium"
+    font-medium
+    disabled:opacity-60"
       >
         <Image
           src="/assets/googleColor.svg"

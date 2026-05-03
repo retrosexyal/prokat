@@ -3,8 +3,16 @@ import clientPromise from "@/lib/mongodb";
 import crypto from "crypto";
 import { Resend } from "resend";
 
+const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
+
 export async function POST(req: Request) {
-  const { email, password, callbackUrl } = await req.json();
+  const {
+    email,
+    password,
+    callbackUrl,
+    acceptedUserAgreement,
+    acceptedPrivacyPolicy,
+  } = await req.json();
 
   const e = String(email || "")
     .toLowerCase()
@@ -13,6 +21,16 @@ export async function POST(req: Request) {
 
   if (!e || p.length < 6) {
     return Response.json({ error: "Invalid data" }, { status: 400 });
+  }
+
+  if (!acceptedUserAgreement || !acceptedPrivacyPolicy) {
+    return Response.json(
+      {
+        error:
+          "Необходимо подтвердить ознакомление с Пользовательским соглашением и Политикой обработки персональных данных",
+      },
+      { status: 400 },
+    );
   }
 
   const client = await clientPromise;
@@ -27,13 +45,24 @@ export async function POST(req: Request) {
   const verifyToken = crypto.randomBytes(32).toString("hex");
 
   const hash = await bcrypt.hash(p, 10);
+  const now = new Date();
+
   await users.insertOne({
     email: e,
     password: hash,
-    createdAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
     verified: false,
     verifyToken,
-    verifySentAt: new Date(),
+    verifySentAt: now,
+
+    acceptedUserAgreement: true,
+    acceptedPrivacyPolicy: true,
+    legalDocumentsVersion: LEGAL_DOCUMENTS_VERSION,
+    legalAcceptedAt: now,
+    legalAcceptedIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? req.headers.get("x-real-ip")
+      ?? undefined,
   });
 
   const resend = new Resend(process.env.RESEND_API_KEY);

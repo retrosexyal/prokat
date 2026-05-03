@@ -6,12 +6,14 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { LegalConsent } from "@/components/LegalConsent";
 
 export default function RegisterForm() {
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,13 +30,27 @@ export default function RegisterForm() {
     e.preventDefault();
     setErr("");
     setSuccess("");
+
+    if (!acceptedLegal) {
+      setErr(
+        "Для регистрации необходимо подтвердить ознакомление с Пользовательским соглашением и Политикой обработки персональных данных.",
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, callbackUrl }),
+        body: JSON.stringify({
+          email,
+          password,
+          callbackUrl,
+          acceptedUserAgreement: acceptedLegal,
+          acceptedPrivacyPolicy: acceptedLegal,
+        }),
       });
 
       const data = await res.json();
@@ -81,7 +97,7 @@ export default function RegisterForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="flex flex-1 flex-col gap-3 p-4 mx-auto w-full max-w-md"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3 p-4"
     >
       <div className="mb-2 text-center">
         <h1 className="text-2xl font-semibold text-zinc-900">Регистрация</h1>
@@ -104,7 +120,13 @@ export default function RegisterForm() {
         type="password"
       />
 
-      <Button type="submit" disabled={loading}>
+      <LegalConsent
+        checked={acceptedLegal}
+        onChange={setAcceptedLegal}
+        id="register-legal-consent"
+      />
+
+      <Button type="submit" disabled={loading || !acceptedLegal}>
         {loading ? "Создание..." : "Создать аккаунт"}
       </Button>
 

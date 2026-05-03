@@ -10,6 +10,8 @@ import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
 import { sendPushNotification } from "@/lib/push";
 
+const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
+
 const GUEST_BOOKING_LIMIT_PER_HOUR = 3;
 
 function normalizeDateStart(value: string): Date {
@@ -85,6 +87,7 @@ export async function POST(request: Request) {
     message?: string;
     startDate?: string;
     endDate?: string;
+    acceptedPrivacyPolicy?: boolean;
   };
 
   const productId = String(body.productId ?? "").trim();
@@ -92,6 +95,17 @@ export async function POST(request: Request) {
   const message = String(body.message ?? "").trim();
   const startDateRaw = String(body.startDate ?? "").trim();
   const endDateRaw = String(body.endDate ?? "").trim();
+  const acceptedPrivacyPolicy = body.acceptedPrivacyPolicy === true;
+
+  if (!acceptedPrivacyPolicy) {
+    return NextResponse.json(
+      {
+        error:
+          "Необходимо подтвердить ознакомление с Политикой обработки персональных данных",
+      },
+      { status: 400 },
+    );
+  }
 
   if (!productId || !phone || !startDateRaw || !endDateRaw) {
     return NextResponse.json(
@@ -255,6 +269,9 @@ export async function POST(request: Request) {
     startDate,
     endDate,
     status: "pending",
+    personalDataConsentAccepted: true,
+    personalDataConsentVersion: LEGAL_DOCUMENTS_VERSION,
+    personalDataConsentAcceptedAt: new Date(),
   });
 
   try {

@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terms`, lastModified: now },
     { url: `${base}/rules`, lastModified: now },
     { url: `${base}/agreement`, lastModified: now },
+    { url: `${base}/privacy`, lastModified: now },
   ];
 
   const regionPages: MetadataRoute.Sitemap = [

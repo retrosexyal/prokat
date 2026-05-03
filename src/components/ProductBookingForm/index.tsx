@@ -15,6 +15,8 @@ import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import { useIsMobile } from "@/hook";
 
+import { LegalConsent } from "@/components/LegalConsent";
+
 type BusyRange = {
   _id?: string;
   startDate: string;
@@ -228,6 +230,7 @@ export function ProductBookingForm({
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   const bookingDraftStorageKey = `booking-draft:${productId}`;
 
@@ -424,6 +427,14 @@ export function ProductBookingForm({
       return;
     }
 
+    if (!acceptedLegal) {
+      setError(
+        "Для отправки бронирования необходимо подтвердить ознакомление с Пользовательским соглашением и Политикой обработки персональных данных.",
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post(API_ROUTES.bookings, {
         productId,
@@ -431,6 +442,7 @@ export function ProductBookingForm({
         message,
         startDate,
         endDate,
+        acceptedPrivacyPolicy: acceptedLegal,
       });
 
       setSuccess("Бронирование отправлено. С вами свяжутся.");
@@ -452,6 +464,7 @@ export function ProductBookingForm({
       setError(getApiErrorMessage(error, "Ошибка бронирования"));
     } finally {
       setLoading(false);
+      setAcceptedLegal(false);
     }
   }
 
@@ -637,10 +650,17 @@ export function ProductBookingForm({
           <div className="text-sm text-emerald-600">{success}</div>
         ) : null}
 
+        <LegalConsent
+          checked={acceptedLegal}
+          onChange={setAcceptedLegal}
+          id={`booking-legal-consent-${productId}`}
+          label="Я подтверждаю, что ознакомлен(а) с порядком обработки моих персональных данных при отправке заявки на бронирование."
+        />
+
         {!success && (
           <button
             type="submit"
-            disabled={loading || loadingBusyDates}
+            disabled={loading || loadingBusyDates || !acceptedLegal}
             className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
           >
             {loading ? "Отправка..." : "Забронировать"}

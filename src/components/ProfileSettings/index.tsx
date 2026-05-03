@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import { PushNotificationsSettings } from "@/components/PushNotificationsSettings";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
+import { LegalConsent } from "@/components/LegalConsent";
 
 type Props = {
   initialName?: string;
@@ -32,6 +33,7 @@ export function ProfileSettings({
 }: Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -61,6 +63,7 @@ export function ProfileSettings({
         phone,
         showPhoneInProducts,
         pickupAddress,
+        acceptedPrivacyPolicy: acceptedLegal,
       });
 
       setSuccess("Профиль обновлён");
@@ -131,9 +134,18 @@ export function ProfileSettings({
           ) : null}
 
           <div className="sm:col-span-2">
+            <LegalConsent
+              checked={acceptedLegal}
+              onChange={setAcceptedLegal}
+              id="profile-legal-consent"
+              label="Я подтверждаю, что ознакомлен(а) с порядком обработки моих персональных данных при сохранении профиля."
+            />
+          </div>
+
+          <div className="sm:col-span-2">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedLegal}
               className="rounded-full bg-accent-strong px-6 py-2 text-sm font-semibold text-black disabled:opacity-60"
             >
               {loading ? "Сохранение..." : "Сохранить профиль"}

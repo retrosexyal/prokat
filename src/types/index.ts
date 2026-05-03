@@ -33,4 +33,15 @@ export type UserType = {
   resetTokenExpires?: Date;
   image?: string;
   pushSubscriptions?: StoredPushSubscription[];
+
+  updatedAt?: Date;
+
+  acceptedUserAgreement?: boolean;
+  acceptedPrivacyPolicy?: boolean;
+  legalDocumentsVersion?: string;
+  legalAcceptedAt?: Date;
+  legalAcceptedIp?: string;
+
+  personalDataConsentVersion?: string;
+  personalDataConsentAcceptedAt?: Date;
 };

@@ -20,6 +20,11 @@ export type BookingDoc = {
   startDate: Date;
   endDate: Date;
   status: BookingStatus;
+
+  personalDataConsentAccepted?: boolean;
+  personalDataConsentVersion?: string;
+  personalDataConsentAcceptedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 };

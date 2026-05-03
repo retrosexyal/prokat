@@ -4,11 +4,14 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import type { UserType } from "@/types";
 
+const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
+
 type UpdateMeBody = {
   name?: string;
   phone?: string;
   showPhoneInProducts?: boolean;
   pickupAddress?: string;
+  acceptedPrivacyPolicy?: boolean;
 };
 
 function normalizePhone(value: string): string {
@@ -28,6 +31,17 @@ export async function PATCH(request: Request) {
   const pickupAddress = String(body.pickupAddress ?? "").trim();
   const phone = normalizePhone(String(body.phone ?? ""));
   const showPhoneInProducts = Boolean(body.showPhoneInProducts);
+  const acceptedPrivacyPolicy = body.acceptedPrivacyPolicy === true;
+
+  if (!acceptedPrivacyPolicy) {
+    return NextResponse.json(
+      {
+        error:
+          "Необходимо подтвердить ознакомление с Политикой обработки персональных данных",
+      },
+      { status: 400 },
+    );
+  }
 
   if (!name) {
     return NextResponse.json({ error: "Укажите имя" }, { status: 400 });
@@ -47,6 +61,8 @@ export async function PATCH(request: Request) {
   const client = await clientPromise;
   const db = client.db();
 
+  const now = new Date();
+
   const updatedUser = await db.collection<UserType>("users").findOneAndUpdate(
     { email: session.user.email },
     {
@@ -55,6 +71,11 @@ export async function PATCH(request: Request) {
         phone,
         showPhoneInProducts,
         pickupAddress,
+        updatedAt: now,
+
+        acceptedPrivacyPolicy: true,
+        personalDataConsentVersion: LEGAL_DOCUMENTS_VERSION,
+        personalDataConsentAcceptedAt: now,
       },
     },
     { returnDocument: "after" },

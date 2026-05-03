@@ -84,6 +84,12 @@ export default function RootLayout({
                 >
                   Пользовательское соглашение
                 </Link>
+                <Link
+                  href="/privacy"
+                  className="transition-colors hover:text-zinc-300"
+                >
+                  Политика обработки персональных данных
+                </Link>
               </div>
             </div>
           </footer>
