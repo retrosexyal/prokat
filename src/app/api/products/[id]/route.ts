@@ -97,6 +97,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
+  const suggestedCategoryName = String(
+    formData.get("suggestedCategoryName") ?? "",
+  ).trim();
   const short = String(formData.get("short") ?? "").trim();
   const fullDescription = String(formData.get("fullDescription") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
@@ -170,7 +173,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (
     !name ||
-    !category ||
+    (!category && !suggestedCategoryName) ||
     !short ||
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
@@ -226,7 +229,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     {
       $set: {
         name,
-        category,
+        category: category || "pending-category",
+        suggestedCategoryName: suggestedCategoryName || undefined,
         short,
         fullDescription: fullDescription || undefined,
         organization,

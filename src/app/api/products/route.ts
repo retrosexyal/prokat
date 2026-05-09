@@ -124,6 +124,9 @@ export async function POST(request: Request) {
     formData.get("category") ?? "",
   ).trim() as ProductDoc["category"];
 
+  const suggestedCategoryName = String(
+    formData.get("suggestedCategoryName") ?? "",
+  ).trim();
   const short = String(formData.get("short") ?? "").trim();
   const fullDescription = String(formData.get("fullDescription") ?? "").trim();
 
@@ -166,7 +169,7 @@ export async function POST(request: Request) {
 
   if (
     !name ||
-    !category ||
+    (!category && !suggestedCategoryName) ||
     !short ||
     Number.isNaN(depositBYN) ||
     Number.isNaN(pricePerDayBYN) ||
@@ -228,7 +231,8 @@ export async function POST(request: Request) {
 
     name,
     slug,
-    category,
+    category: category || "pending-category",
+    suggestedCategoryName: suggestedCategoryName || undefined,
 
     short,
     fullDescription: fullDescription || undefined,

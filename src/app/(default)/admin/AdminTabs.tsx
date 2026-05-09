@@ -8,6 +8,7 @@ import { AdminExpiredBoosts } from "./AdminExpiredBoosts";
 import { AdminProductsPanel } from "./AdminProductsPanel";
 import type { ProductView } from "@/types/product";
 import type { MonetizationRequestView } from "@/types/monetization";
+import type { CategoryView } from "@/types/category";
 
 type AdminTabKey =
   | "categories"
@@ -29,6 +30,7 @@ type Props = {
   allProducts: ProductView[];
   monetizationRequests: MonetizationRequestView[];
   expiredBoostRequests: MonetizationRequestView[];
+  categories: CategoryView[];
 };
 
 export function AdminTabs({
@@ -36,6 +38,7 @@ export function AdminTabs({
   allProducts,
   monetizationRequests,
   expiredBoostRequests,
+  categories
 }: Props) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>("moderation");
 
@@ -73,7 +76,7 @@ export function AdminTabs({
       {activeTab === "categories" ? <CategoriesManager /> : null}
 
       {activeTab === "moderation" ? (
-        <AdminModerationPanel initialProducts={pendingProducts} />
+        <AdminModerationPanel initialProducts={pendingProducts} categories={categories}/>
       ) : null}
 
       {activeTab === "monetization" ? (

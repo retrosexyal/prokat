@@ -29,8 +29,80 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid product id" }, { status: 400 });
+  }
+
   const body = await request.json();
-  const updated = await updateProduct(id, body);
+
+  const status = body?.status as ProductDoc["status"] | undefined;
+  const selectedCategory = String(body?.category ?? "").trim();
+
+  const createCategoryInput = body?.createCategory
+    ? {
+        name: String(body.createCategory.name ?? "").trim(),
+        slug: String(body.createCategory.slug ?? "").trim(),
+        parentId: body.createCategory.parentId
+          ? String(body.createCategory.parentId)
+          : null,
+        isActive: true,
+        sortOrder: Number(body.createCategory.sortOrder ?? 100),
+        indexingMode: "index" as const,
+      }
+    : null;
+
+  if (
+    status === "approved" &&
+    !selectedCategory &&
+    !createCategoryInput?.name
+  ) {
+    return NextResponse.json(
+      { error: "Перед одобрением выберите или создайте категорию" },
+      { status: 400 },
+    );
+  }
+
+  const client = await clientPromise;
+  const db = client.db();
+
+  let finalCategory = selectedCategory;
+
+  if (createCategoryInput?.name) {
+    const { createCategory } = await import("@/lib/categories");
+
+    const createdCategory = await createCategory(db, createCategoryInput);
+    finalCategory = createdCategory.slug;
+  }
+
+  const setPatch: Partial<ProductDoc> = {
+    updatedAt: new Date(),
+  };
+
+  if (status) {
+    setPatch.status = status;
+  }
+
+  if (finalCategory) {
+    setPatch.category = finalCategory;
+  }
+
+  const updateQuery: {
+    $set: Partial<ProductDoc>;
+    $unset?: Record<string, true | "" | 1>;
+  } = {
+    $set: setPatch,
+  };
+  if (finalCategory) {
+    updateQuery.$unset = {
+      suggestedCategoryName: "",
+    };
+  }
+
+  const updated = await db
+    .collection<ProductDoc>("products")
+    .findOneAndUpdate({ _id: new ObjectId(id) }, updateQuery, {
+      returnDocument: "after",
+    });
 
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

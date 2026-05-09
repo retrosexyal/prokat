@@ -23,6 +23,7 @@ export type ProductDoc = {
   name: string;
   slug: string;
   category: string;
+  suggestedCategoryName?: string;
 
   short: string;
   fullDescription?: string;
@@ -72,6 +73,7 @@ export type ProductView = {
   name: string;
   slug: string;
   category: string;
+  suggestedCategoryName?: string;
 
   short: string;
   fullDescription?: string;

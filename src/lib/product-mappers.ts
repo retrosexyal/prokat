@@ -9,6 +9,7 @@ export function toProductView(product: ProductDoc): ProductView {
     name: product.name,
     slug: product.slug,
     category: product.category,
+    suggestedCategoryName: product.suggestedCategoryName,
 
     short: product.short,
     fullDescription: product.fullDescription,

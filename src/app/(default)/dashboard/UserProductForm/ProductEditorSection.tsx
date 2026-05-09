@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { CITIES, getRealCityBySlug } from "@/lib/cities";
 import { FileDropzone } from "@/components/ui/FileDropzone";
 import type { CategoryView } from "@/types/category";
 import type { ProductFormValues } from "@/types/product-form";
 import type { ExistingImage } from "./types";
+import { CategoryCombobox } from "./CategoryCombobox";
 
 const MAX_IMAGES = 10;
 
@@ -47,31 +48,6 @@ export function ProductEditorSection({
   onRemoveSelectedImage,
   onRemoveAllNewImages,
 }: Props) {
-  const parentMap = useMemo(() => {
-    return new Map(categories.map((category) => [category._id, category]));
-  }, [categories]);
-
-  const selectableCategories = useMemo(() => {
-    return categories
-      .filter((category) => category.isActive)
-      .filter((category) => {
-        return !categories.some(
-          (candidate) => candidate.parentId === category._id,
-        );
-      })
-      .sort((a, b) => {
-        if (a.level !== b.level) {
-          return a.level - b.level;
-        }
-
-        if (a.sortOrder !== b.sortOrder) {
-          return a.sortOrder - b.sortOrder;
-        }
-
-        return a.name.localeCompare(b.name, "ru");
-      });
-  }, [categories]);
-
   function getKitItems(): string[] {
     return form.kitIncludedText ? form.kitIncludedText.split("\n") : [""];
   }
@@ -95,24 +71,6 @@ export function ProductEditorSection({
       ...prev,
       kitIncludedText: items.length > 0 ? items.join("\n") : "",
     }));
-  }
-
-  const hasCurrentCategoryInOptions = selectableCategories.some(
-    (category) => category.slug === form.category,
-  );
-
-  function getCategoryLabel(category: CategoryView): string {
-    if (!category.parentId) {
-      return category.name;
-    }
-
-    const parent = parentMap.get(category.parentId);
-
-    if (!parent) {
-      return category.name;
-    }
-
-    return `${parent.name} → ${category.name}`;
   }
 
   function getSpecificationItems(): { label: string; value: string }[] {
@@ -255,34 +213,25 @@ export function ProductEditorSection({
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-xs sm:text-sm">
-          Категория
-          <select
-            className="rounded-md border px-2 py-1.5 text-sm"
-            value={form.category}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                category: event.target.value as ProductFormValues["category"],
-              }))
-            }
-            required
-          >
-            <option value="">Выберите категорию</option>
-
-            {!hasCurrentCategoryInOptions && form.category ? (
-              <option value={form.category}>
-                Текущая категория ({form.category})
-              </option>
-            ) : null}
-
-            {selectableCategories.map((category) => (
-              <option value={category.slug} key={category._id ?? category.slug}>
-                {getCategoryLabel(category)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CategoryCombobox
+          categories={categories}
+          value={form.category}
+          suggestedValue={form.suggestedCategoryName}
+          onChange={(category) =>
+            setForm((prev) => ({
+              ...prev,
+              category,
+              suggestedCategoryName: category ? "" : prev.suggestedCategoryName,
+            }))
+          }
+          onSuggest={(suggestedCategoryName) =>
+            setForm((prev) => ({
+              ...prev,
+              category: "",
+              suggestedCategoryName,
+            }))
+          }
+        />
 
         <label className="flex flex-col gap-1 text-xs sm:text-sm">
           Город

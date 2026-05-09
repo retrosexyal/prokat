@@ -140,6 +140,7 @@ export function UserProductForm({
       name: product.name ?? "",
       slug: product.slug ?? "",
       category: product.category as ProductFormValues["category"],
+      suggestedCategoryName: product.suggestedCategoryName ?? "",
 
       short: product.short ?? "",
       fullDescription: product.fullDescription ?? "",
@@ -257,6 +258,7 @@ export function UserProductForm({
       formData.append("model", form.model);
       formData.append("condition", form.condition);
       formData.append("deliveryAvailable", String(form.deliveryAvailable));
+      formData.append("suggestedCategoryName", form.suggestedCategoryName);
 
       form.kitIncludedText
         .split("\n")

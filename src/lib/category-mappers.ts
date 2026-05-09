@@ -24,3 +24,7 @@ export function toCategoryView(category: CategoryDoc): CategoryView {
     updatedAt: category.updatedAt.toISOString(),
   };
 }
+
+export function toCategoryViews(categories: CategoryDoc[]): CategoryView[] {
+  return categories.map(toCategoryView);
+}

@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
+import type { CategoryView } from "@/types/category";
 import type { ProductDoc, ProductStatus, ProductView } from "@/types/product";
 
 type Props = {
   initialProducts: ProductView[];
+  categories: CategoryView[];
+};
+
+type ModerationCategoryState = {
+  selectedCategory: string;
+  newCategoryName: string;
+  parentId: string;
 };
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -20,26 +28,112 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export function AdminModerationPanel({ initialProducts }: Props) {
+export function AdminModerationPanel({ initialProducts, categories }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState<ProductView[]>(initialProducts);
   const [error, setError] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  const [categoryState, setCategoryState] = useState<
+    Record<string, ModerationCategoryState>
+  >({});
+
+  const parentMap = useMemo(() => {
+    return new Map(categories.map((category) => [category._id, category]));
+  }, [categories]);
+
+  const rootCategories = useMemo(() => {
+    return categories
+      .filter((category) => category.isActive && category.level === 1)
+      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  }, [categories]);
+
+  const selectableCategories = useMemo(() => {
+    return categories
+      .filter((category) => category.isActive)
+      .filter((category) => {
+        return !categories.some(
+          (candidate) => candidate.parentId === category._id,
+        );
+      })
+      .sort((a, b) => {
+        if (a.level !== b.level) return a.level - b.level;
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        return a.name.localeCompare(b.name, "ru");
+      });
+  }, [categories]);
+
+  function getCategoryLabel(category: CategoryView): string {
+    if (!category.parentId) return category.name;
+
+    const parent = parentMap.get(category.parentId);
+
+    if (!parent) return category.name;
+
+    return `${parent.name} → ${category.name}`;
+  }
+
+  function getProductCategoryState(product: ProductView): ModerationCategoryState {
+    const id = product._id ?? product.slug;
+
+    return (
+      categoryState[id] ?? {
+        selectedCategory:
+          product.category && product.category !== "pending-category"
+            ? product.category
+            : "",
+        newCategoryName: product.suggestedCategoryName ?? "",
+        parentId: "",
+      }
+    );
+  }
+
+  function updateProductCategoryState(
+    product: ProductView,
+    patch: Partial<ModerationCategoryState>,
+  ): void {
+    const id = product._id ?? product.slug;
+
+    setCategoryState((prev) => ({
+      ...prev,
+      [id]: {
+        ...getProductCategoryState(product),
+        ...patch,
+      },
+    }));
+  }
+
   async function changeStatus(
-    id: string,
+    product: ProductView,
     status: ProductStatus,
   ): Promise<void> {
+    const id = product._id;
+
+    if (!id) return;
+
+    const state = getProductCategoryState(product);
+
     setError("");
     setLoadingId(id);
 
     try {
       await api.patch<ProductDoc>(API_ROUTES.adminProductById(id), {
         status,
+        category: state.selectedCategory,
+        createCategory:
+          status === "approved" &&
+          !state.selectedCategory &&
+          state.newCategoryName.trim()
+            ? {
+                name: state.newCategoryName.trim(),
+                parentId: state.parentId || null,
+                sortOrder: 100,
+              }
+            : undefined,
       });
 
-      setProducts((prev) => prev.filter((product) => product._id !== id));
+      setProducts((prev) => prev.filter((item) => item._id !== id));
       router.refresh();
     } catch (error: unknown) {
       setError(getApiErrorMessage(error, "Ошибка изменения статуса"));
@@ -65,8 +159,8 @@ export function AdminModerationPanel({ initialProducts }: Props) {
   }
 
   return (
-    <section className="bg-white rounded-xl border border-border-subtle p-4 sm:p-6">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-4">
+    <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
+      <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
         Заявки на модерацию
       </h2>
 
@@ -87,6 +181,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
           const id = product._id?.toString() ?? null;
           const isLoading = loadingId === id;
           const isDeletingConfirmOpen = deleteConfirmId === id;
+          const moderationCategory = getProductCategoryState(product);
 
           return (
             <article
@@ -126,37 +221,131 @@ export function AdminModerationPanel({ initialProducts }: Props) {
 
                   <div className="grid gap-2 text-sm sm:grid-cols-2">
                     <div>
-                      <span className="font-medium">Категория:</span>{" "}
+                      <span className="font-medium">Текущая категория:</span>{" "}
                       {product.category}
                     </div>
+
+                    <div>
+                      <span className="font-medium">
+                        Предложенная категория:
+                      </span>{" "}
+                      {product.suggestedCategoryName ?? "—"}
+                    </div>
+
                     <div>
                       <span className="font-medium">Организация:</span>{" "}
                       {product.organization?.trim()
                         ? product.organization
                         : "—"}
                     </div>
+
                     <div>
                       <span className="font-medium">Город:</span> {product.city}
                     </div>
+
                     <div>
                       <span className="font-medium">Цена за сутки:</span>{" "}
                       {product.pricePerDayBYN} BYN
                     </div>
+
                     <div>
                       <span className="font-medium">Залог:</span>{" "}
                       {product.depositBYN} BYN
                     </div>
+
                     <div>
                       <span className="font-medium">Мин. дней:</span>{" "}
                       {product.minDays}
                     </div>
+
                     <div>
                       <span className="font-medium">Email владельца:</span>{" "}
                       {product.ownerEmail ?? "—"}
                     </div>
+
                     <div>
                       <span className="font-medium">Создан:</span>{" "}
                       {new Date(product.createdAt).toLocaleString("ru-RU")}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-zinc-50 p-3">
+                    <div className="mb-2 text-sm font-semibold">
+                      Категория перед одобрением
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1 text-xs sm:text-sm">
+                        Выбрать существующую
+                        <select
+                          className="rounded-md border bg-white px-2 py-1.5 text-sm"
+                          value={moderationCategory.selectedCategory}
+                          onChange={(event) =>
+                            updateProductCategoryState(product, {
+                              selectedCategory: event.target.value,
+                              newCategoryName: event.target.value
+                                ? ""
+                                : moderationCategory.newCategoryName,
+                            })
+                          }
+                        >
+                          <option value="">Не выбрана</option>
+
+                          {selectableCategories.map((category) => (
+                            <option
+                              key={category._id ?? category.slug}
+                              value={category.slug}
+                            >
+                              {getCategoryLabel(category)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="flex flex-col gap-1 text-xs sm:text-sm">
+                        Или создать новую
+                        <input
+                          className="rounded-md border bg-white px-2 py-1.5 text-sm"
+                          value={moderationCategory.newCategoryName}
+                          disabled={Boolean(moderationCategory.selectedCategory)}
+                          placeholder="Название новой категории"
+                          onChange={(event) =>
+                            updateProductCategoryState(product, {
+                              newCategoryName: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+
+                      <label className="flex flex-col gap-1 text-xs sm:text-sm sm:col-span-2">
+                        Родительская категория для новой
+                        <select
+                          className="rounded-md border bg-white px-2 py-1.5 text-sm"
+                          value={moderationCategory.parentId}
+                          disabled={
+                            Boolean(moderationCategory.selectedCategory) ||
+                            !moderationCategory.newCategoryName.trim()
+                          }
+                          onChange={(event) =>
+                            updateProductCategoryState(product, {
+                              parentId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">
+                            Создать как корневую категорию
+                          </option>
+
+                          {rootCategories.map((category) => (
+                            <option
+                              key={category._id ?? category.slug}
+                              value={category._id}
+                            >
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
                   </div>
 
@@ -175,7 +364,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
                         type="button"
                         disabled={isLoading}
                         className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                        onClick={() => changeStatus(id, "approved")}
+                        onClick={() => changeStatus(product, "approved")}
                       >
                         Одобрить
                       </button>
@@ -184,7 +373,7 @@ export function AdminModerationPanel({ initialProducts }: Props) {
                         type="button"
                         disabled={isLoading}
                         className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                        onClick={() => changeStatus(id, "rejected")}
+                        onClick={() => changeStatus(product, "rejected")}
                       >
                         Отклонить
                       </button>

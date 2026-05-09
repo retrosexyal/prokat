@@ -11,6 +11,8 @@ import { getMonetizationRequestsForAdmin } from "@/lib/monetization-requests";
 import { toProductViews } from "@/lib/product-mappers";
 import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
 import { AdminTabs } from "./AdminTabs";
+import { getAllCategories } from "@/lib/categories";
+import { toCategoryViews } from "@/lib/category-mappers";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
@@ -19,13 +21,19 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [pendingProducts, allProducts, requests, expiredBoostedProducts] =
-    await Promise.all([
-      getPendingProducts(),
-      getAllProductsForAdmin(),
-      getMonetizationRequestsForAdmin({ includeProcessed: true }),
-      getExpiredBoostedProducts(),
-    ]);
+  const [
+    pendingProducts,
+    allProducts,
+    requests,
+    expiredBoostedProducts,
+    categories,
+  ] = await Promise.all([
+    getPendingProducts(),
+    getAllProductsForAdmin(),
+    getMonetizationRequestsForAdmin({ includeProcessed: true }),
+    getExpiredBoostedProducts(),
+    getAllCategories(),
+  ]);
 
   const expiredBoostRequests = requests.filter((request) => {
     const productId = request.productId?.toString();
@@ -41,6 +49,7 @@ export default async function AdminPage() {
       allProducts={toProductViews(allProducts)}
       monetizationRequests={toMonetizationRequestViews(requests)}
       expiredBoostRequests={toMonetizationRequestViews(expiredBoostRequests)}
+      categories={toCategoryViews(categories)}
     />
   );
 }

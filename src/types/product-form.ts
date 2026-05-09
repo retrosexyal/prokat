@@ -5,6 +5,7 @@ export type ProductFormValues = {
   name: string;
   slug: string;
   category: ProductDoc["category"];
+  suggestedCategoryName: string;
 
   short: string;
   fullDescription: string;
@@ -35,6 +36,7 @@ export const emptyProductForm: ProductFormValues = {
   name: "",
   slug: "",
   category: "",
+  suggestedCategoryName: "",
 
   short: "",
   fullDescription: "",
