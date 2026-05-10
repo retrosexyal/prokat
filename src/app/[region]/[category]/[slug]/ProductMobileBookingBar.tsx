@@ -9,6 +9,7 @@ type Props = {
   totalQuantity: number;
   pricePerDayBYN: number;
   productName: string;
+  ownerPhone?: string;
 };
 
 export function ProductMobileBookingBar({
@@ -17,6 +18,7 @@ export function ProductMobileBookingBar({
   totalQuantity,
   pricePerDayBYN,
   productName,
+  ownerPhone,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -89,6 +91,7 @@ export function ProductMobileBookingBar({
                 productId={productId}
                 minDays={minDays}
                 totalQuantity={totalQuantity}
+                ownerPhone={ownerPhone}
               />
             </div>
           </div>

@@ -209,6 +209,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         totalQuantity={product.quantity ?? 1}
         pricePerDayBYN={product.pricePerDayBYN}
         productName={product.name}
+        ownerPhone={product.ownerPhone}
       />
     </>
   );

@@ -55,7 +55,7 @@ export function ProductGallery({ name, images = [] }: Props) {
         </button>
 
         {showThumbnails ? (
-          <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1">
+          <div className="product-thumbnails-scroll flex gap-2 overflow-x-auto overflow-y-hidden pb-2">
             {normalizedImages.map((image, index) => {
               const isActive = index === selectedIndex;
 
@@ -100,7 +100,7 @@ export function ProductGallery({ name, images = [] }: Props) {
           </div>
 
           {showThumbnails ? (
-            <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1">
+            <div className="product-thumbnails-scroll flex gap-2 overflow-x-auto overflow-y-hidden pb-2">
               {normalizedImages.map((image, index) => {
                 const isActive = index === selectedIndex;
 

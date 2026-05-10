@@ -58,6 +58,7 @@ export function ProductSidebar({ product }: Props) {
             productId={product._id!.toString()}
             minDays={product.minDays}
             totalQuantity={product.quantity ?? 1}
+            ownerPhone={product.ownerPhone}
           />
         </div>
       </div>
