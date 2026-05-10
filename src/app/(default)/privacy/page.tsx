@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       <p>
         Оператором персональных данных является администрация сайта Prokatik.by.
         Контакт для обращений по вопросам обработки персональных данных:
-        <a href="mailto:retrosexyal@gmail.com">retrosexyal@gmail.com</a>.
+        <a href="mailto:prokatik.mail@gmail.com">prokatik.mail@gmail.com</a>.
       </p>
 
       <h2>2. Какие персональные данные обрабатываются</h2>
