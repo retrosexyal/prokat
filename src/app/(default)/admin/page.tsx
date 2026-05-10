@@ -8,8 +8,10 @@ import {
   getPendingProducts,
 } from "@/lib/products";
 import { getMonetizationRequestsForAdmin } from "@/lib/monetization-requests";
+import { getContactMessagesForAdmin } from "@/lib/contact-messages";
 import { toProductViews } from "@/lib/product-mappers";
 import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
+import { toContactMessageViews } from "@/lib/contact-message-mappers";
 import { AdminTabs } from "./AdminTabs";
 import { getAllCategories } from "@/lib/categories";
 import { toCategoryViews } from "@/lib/category-mappers";
@@ -27,12 +29,14 @@ export default async function AdminPage() {
     requests,
     expiredBoostedProducts,
     categories,
+    contactMessages,
   ] = await Promise.all([
     getPendingProducts(),
     getAllProductsForAdmin(),
     getMonetizationRequestsForAdmin({ includeProcessed: true }),
     getExpiredBoostedProducts(),
     getAllCategories(),
+    getContactMessagesForAdmin(),
   ]);
 
   const expiredBoostRequests = requests.filter((request) => {
@@ -50,6 +54,7 @@ export default async function AdminPage() {
       monetizationRequests={toMonetizationRequestViews(requests)}
       expiredBoostRequests={toMonetizationRequestViews(expiredBoostRequests)}
       categories={toCategoryViews(categories)}
+      contactMessages={toContactMessageViews(contactMessages)}
     />
   );
 }

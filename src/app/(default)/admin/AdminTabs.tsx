@@ -6,16 +6,19 @@ import { AdminModerationPanel } from "./AdminModerationPanel";
 import { AdminMonetizationRequests } from "./AdminMonetizationRequests";
 import { AdminExpiredBoosts } from "./AdminExpiredBoosts";
 import { AdminProductsPanel } from "./AdminProductsPanel";
+import { AdminContactMessages } from "./AdminContactMessages";
 import type { ProductView } from "@/types/product";
 import type { MonetizationRequestView } from "@/types/monetization";
 import type { CategoryView } from "@/types/category";
+import type { ContactMessageView } from "@/types/contact-message";
 
 type AdminTabKey =
   | "categories"
   | "moderation"
   | "monetization"
   | "expiredBoosts"
-  | "products";
+  | "products"
+  | "messages";
 
 const TABS: Array<{ key: AdminTabKey; label: string }> = [
   { key: "categories", label: "Категории" },
@@ -23,6 +26,7 @@ const TABS: Array<{ key: AdminTabKey; label: string }> = [
   { key: "monetization", label: "Монетизация" },
   { key: "expiredBoosts", label: "Истёкшие бусты" },
   { key: "products", label: "Товары" },
+  { key: "messages", label: "Сообщения" },
 ];
 
 type Props = {
@@ -31,6 +35,7 @@ type Props = {
   monetizationRequests: MonetizationRequestView[];
   expiredBoostRequests: MonetizationRequestView[];
   categories: CategoryView[];
+  contactMessages: ContactMessageView[];
 };
 
 export function AdminTabs({
@@ -38,14 +43,15 @@ export function AdminTabs({
   allProducts,
   monetizationRequests,
   expiredBoostRequests,
-  categories
+  categories,
+  contactMessages,
 }: Props) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>("moderation");
 
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Админ-панель</h1>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Админ-панель</h1>
         <p className="mt-2 text-sm text-zinc-500">
           Выберите нужный раздел сверху.
         </p>
@@ -76,7 +82,10 @@ export function AdminTabs({
       {activeTab === "categories" ? <CategoriesManager /> : null}
 
       {activeTab === "moderation" ? (
-        <AdminModerationPanel initialProducts={pendingProducts} categories={categories}/>
+        <AdminModerationPanel
+          initialProducts={pendingProducts}
+          categories={categories}
+        />
       ) : null}
 
       {activeTab === "monetization" ? (
@@ -89,6 +98,10 @@ export function AdminTabs({
 
       {activeTab === "products" ? (
         <AdminProductsPanel initialProducts={allProducts} />
+      ) : null}
+
+      {activeTab === "messages" ? (
+        <AdminContactMessages initialMessages={contactMessages} />
       ) : null}
     </div>
   );

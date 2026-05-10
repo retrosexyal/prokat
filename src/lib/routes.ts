@@ -11,7 +11,10 @@ export const API_ROUTES = {
   bookings: "/api/bookings",
   me: "/api/users/me",
   bookingById: (id: string) => `/api/bookings/${id}`,
-  
+
+  contact: "/api/contact",
+  adminContactMessageById: (id: string) =>
+    `/api/admin/contact-messages/${id}`,
 
   monetizationRequests: "/api/monetization/requests",
   monetizationRequestStatus: (id: string) =>

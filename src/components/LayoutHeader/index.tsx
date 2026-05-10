@@ -13,7 +13,9 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
   const requestCity = await getRequestCity();
 
   const initialRegion: RegionSlug =
-    forcedRegion && isRegionSlug(forcedRegion) ? forcedRegion : requestCity.slug;
+    forcedRegion && isRegionSlug(forcedRegion)
+      ? forcedRegion
+      : requestCity.slug;
 
   return (
     <header className="border-b border-border-subtle bg-header">
@@ -55,6 +57,13 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
           >
             Каталог
           </Link>
+
+          <Link
+            href="/contact"
+            className="shrink-0 rounded-full border border-border-subtle bg-white px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Контакты
+          </Link>
         </div>
 
         <div className="mt-3 md:hidden">
@@ -95,6 +104,13 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
               className="rounded-md px-3 py-2 hover:bg-zinc-100"
             >
               Каталог
+            </Link>
+
+            <Link
+              href="/contact"
+              className="rounded-md px-3 py-2 hover:bg-zinc-100"
+            >
+              Контакты
             </Link>
 
             <Link
