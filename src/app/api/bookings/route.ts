@@ -8,7 +8,7 @@ import { toBookingView } from "@/lib/booking-mappers";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
-import { sendPushNotification } from "@/lib/push";
+import { notifyUser } from "@/lib/user-notifications";
 
 const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
 
@@ -279,33 +279,17 @@ export async function POST(request: Request) {
       .collection<UserType>("users")
       .findOne({ _id: product.ownerId } as unknown as Filter<UserType>);
 
-    const subscriptions = owner?.pushSubscriptions ?? [];
+    const senderLabel = renterEmail ? renterEmail : `Гость · ${phone}`;
 
-    if (subscriptions.length > 0) {
-      const senderLabel = renterEmail ? renterEmail : `Гость · ${phone}`;
-
-      const pushResult = await sendPushNotification(subscriptions, {
-        title: "Новое бронирование",
-        body: `${product.name}: ${formatDate(startDate)} — ${formatDate(endDate)}. ${senderLabel}`,
-        url: "/dashboard",
-        icon: "/favicon-192x192.png",
-        badge: "/favicon-192x192.png",
-      });
-
-      if (pushResult.expiredEndpoints.length > 0) {
-        await db
-          .collection<UserType>("users")
-          .updateOne({ _id: product.ownerId } as unknown as Filter<UserType>, {
-            $pull: {
-              pushSubscriptions: {
-                endpoint: { $in: pushResult.expiredEndpoints },
-              },
-            } as never,
-          });
-      }
-    }
+    await notifyUser(db, owner, {
+      title: "Новое бронирование",
+      body: `${product.name}: ${formatDate(startDate)} — ${formatDate(endDate)}. ${senderLabel}`,
+      url: "/dashboard",
+      icon: "/favicon-192x192.png",
+      badge: "/favicon-192x192.png",
+    });
   } catch (error) {
-    console.error("Booking created, but push notification failed:", error);
+    console.error("Booking created, but notification failed:", error);
   }
 
   return NextResponse.json(toBookingView(booking), { status: 201 });

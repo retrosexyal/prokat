@@ -8,6 +8,7 @@ import { API_ROUTES } from "@/lib/routes";
 import { PushNotificationsSettings } from "@/components/PushNotificationsSettings";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { LegalConsent } from "@/components/LegalConsent";
+import { TelegramNotificationsSettings } from "../TelegramNotificationsSettings";
 
 type Props = {
   initialName?: string;
@@ -158,6 +159,7 @@ export function ProfileSettings({
         <>
           <PwaInstallPrompt />
           <PushNotificationsSettings />
+          <TelegramNotificationsSettings />
         </>
       ) : null}
     </div>

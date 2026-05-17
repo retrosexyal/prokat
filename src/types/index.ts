@@ -44,4 +44,14 @@ export type UserType = {
 
   personalDataConsentVersion?: string;
   personalDataConsentAcceptedAt?: Date;
+
+  telegramChatId?: number;
+  telegramUsername?: string;
+  telegramFirstName?: string;
+  telegramLastName?: string;
+  telegramLinkedAt?: Date;
+  telegramNotificationsEnabled?: boolean;
+
+  telegramLinkTokenHash?: string;
+  telegramLinkTokenExpiresAt?: Date;
 };

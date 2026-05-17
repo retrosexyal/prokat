@@ -89,7 +89,611 @@ type SeedProductInput = {
   status?: ProductStatus;
 };
 
-const PRODUCTS: SeedProductInput[] = [
+const PRODUCT_IMAGES = {
+  underarmCrutch: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016770/%D0%BA%D0%BE%D1%81%D1%82%D1%8B%D0%BB%D1%8C_%D0%BF%D0%BE%D0%B4%D0%BC%D1%8B%D1%88%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B4%D0%BE_150_%D0%BA%D0%B3_2_an69wr.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%BA%D0%BE%D1%81%D1%82%D1%8B%D0%BB%D1%8C_%D0%BF%D0%BE%D0%B4%D0%BC%D1%8B%D1%88%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B4%D0%BE_150_%D0%BA%D0%B3_1_yr5auq.webp",
+  ],
+  walkingCrutch: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%BA%D0%BE%D1%81%D1%82%D1%8B%D0%BB%D1%8C_%D0%BE%D0%BF%D0%BE%D1%80%D0%BD%D1%8B%D0%B9_el3i1f.webp",
+  ],
+  trampoline: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%B1%D0%B0%D1%82%D1%83%D1%82_400_%D1%81%D0%BC_1_dgfzdo.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%B1%D0%B0%D1%82%D1%83%D1%82_400_%D1%81%D0%BC_2_akvwrh.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D0%B1%D0%B0%D1%82%D1%83%D1%82_400_%D1%81%D0%BC_3.png_vk4jjq.webp",
+  ],
+  chainsaw: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%91%D0%B5%D0%BD%D0%B7%D0%BE%D0%BF%D0%B8%D0%BB%D0%B0_oleo_mac_gsh_51_2_oqvgqy.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%91%D0%B5%D0%BD%D0%B7%D0%BE%D0%BF%D0%B8%D0%BB%D0%B0_oleo_mac_gsh_51_3_cl3usk.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%91%D0%B5%D0%BD%D0%B7%D0%BE%D0%BF%D0%B8%D0%BB%D0%B0_oleo_mac_gsh_51_1_kibpbc.webp",
+  ],
+  thermalCamera: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D1%82%D0%B5%D0%BF%D0%BB%D0%BE%D0%B2%D0%B8%D0%B7%D0%BE%D1%80_Ermenrich_seek_tv50_1_qc2mzv.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D1%82%D0%B5%D0%BF%D0%BB%D0%BE%D0%B2%D0%B8%D0%B7%D0%BE%D1%80_Ermenrich_seek_tv50_2_o8zrk7.webp",
+  ],
+  tent: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%BF%D0%B0%D0%BB%D0%B0%D1%82%D0%BA%D0%B0_Atemi_Angara_3_2_bkhyoh.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%BF%D0%B0%D0%BB%D0%B0%D1%82%D0%BA%D0%B0_Atemi_Angara_3_1_k9xfaw.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%BF%D0%B0%D0%BB%D0%B0%D1%82%D0%BA%D0%B0_Atemi_Angara_3_3_f6hhjd.webp",
+  ],
+  miniTrainer: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016769/%D0%BC%D0%B8%D0%BD%D0%B8_%D1%82%D1%80%D0%B5%D0%BD%D0%B0%D0%B6%D0%B5%D1%80_alpin_1_xh73vc.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%BC%D0%B8%D0%BD%D0%B8_%D1%82%D1%80%D0%B5%D0%BD%D0%B0%D0%B6%D0%B5%D1%80_alpin_2_lfmhos.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D0%BC%D0%B8%D0%BD%D0%B8_%D1%82%D1%80%D0%B5%D0%BD%D0%B0%D0%B6%D0%B5%D1%80_alpin_3_uu6p7i.webp",
+  ],
+  ladder: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%BB%D0%B5%D1%81%D1%82%D0%BD%D0%B8%D1%86%D0%B0_%D0%BD%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0_nv_123_3_f9waht.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D0%BB%D0%B5%D1%81%D1%82%D0%BD%D0%B8%D1%86%D0%B0_%D0%BD%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0_nv_123_2_qmyasc.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D0%BB%D0%B5%D1%81%D1%82%D0%BD%D0%B8%D1%86%D0%B0_%D0%BD%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%B0_nv_123_1_ug95bl.webp",
+  ],
+  pipeWelder: [
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016768/%D1%81%D0%B2%D0%B0%D1%80%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B0%D0%BF%D0%BF%D0%B0%D1%80%D0%B0%D1%82_%D0%B4%D0%BB%D1%8F_%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA%D0%BE%D0%B2%D1%8B%D1%85_%D1%82%D1%80%D1%83%D0%B1_DWP_800_1_pzpfkb.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D1%81%D0%B2%D0%B0%D1%80%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B0%D0%BF%D0%BF%D0%B0%D1%80%D0%B0%D1%82_%D0%B4%D0%BB%D1%8F_%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA%D0%BE%D0%B2%D1%8B%D1%85_%D1%82%D1%80%D1%83%D0%B1_DWP_800_2_plgvjj.webp",
+    "https://res.cloudinary.com/diywrzgsf/image/upload/v1779016767/%D1%81%D0%B2%D0%B0%D1%80%D0%BE%D1%87%D0%BD%D1%8B%D0%B9_%D0%B0%D0%BF%D0%BF%D0%B0%D1%80%D0%B0%D1%82_%D0%B4%D0%BB%D1%8F_%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA%D0%BE%D0%B2%D1%8B%D1%85_%D1%82%D1%80%D1%83%D0%B1_DWP_800_3_kjkafj.webp",
+  ],
+};
+
+const SEED_CITIES: Array<{
+  city: string;
+  citySlug: CitySlug;
+  pickupAddress: string;
+  deliveryAvailable: boolean;
+}> = [
+  {
+    city: "Минск",
+    citySlug: "minsk",
+    pickupAddress: "Минск, ул. Притыцкого, д. 12",
+    deliveryAvailable: true,
+  },
+  {
+    city: "Брест",
+    citySlug: "brest",
+    pickupAddress: "Брест, ул. Советская, д. 88",
+    deliveryAvailable: true,
+  },
+  {
+    city: "Витебск",
+    citySlug: "vitebsk",
+    pickupAddress: "Витебск, ул. Ленина, д. 54",
+    deliveryAvailable: true,
+  },
+  {
+    city: "Гомель",
+    citySlug: "gomel",
+    pickupAddress: "Гомель, ул. Советская, д. 41",
+    deliveryAvailable: true,
+  },
+  {
+    city: "Гродно",
+    citySlug: "grodno",
+    pickupAddress: "Гродно, ул. Горького, д. 91",
+    deliveryAvailable: true,
+  },
+  {
+    city: "Могилёв",
+    citySlug: "mogilev",
+    pickupAddress: "Могилёв, ул. Аркадия Кулешова, д. 1а",
+    deliveryAvailable: true,
+  },
+];
+
+type ProductTemplate = Omit<
+  SeedProductInput,
+  "slug" | "city" | "citySlug" | "pickupAddress" | "deliveryAvailable"
+> & {
+  baseSlug: string;
+};
+
+const PRODUCT_TEMPLATES: ProductTemplate[] = [
+  {
+    baseSlug: "kostyl-podmyshechnyy-do-150-kg",
+    name: "Костыль подмышечный до 150 кг",
+    category: "kostyli",
+    short:
+      "Подмышечный костыль с регулировкой высоты для временной поддержки при ходьбе.",
+    fullDescription:
+      "Подмышечный костыль до 150 кг подходит для временного использования после травм, операций, растяжений и в период восстановления. Конструкция помогает снизить нагрузку на ногу и обеспечивает дополнительную устойчивость при передвижении дома, на улице или в медицинском учреждении.",
+    organization: "Prokatik",
+    brand: "Без бренда",
+    model: "до 150 кг",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 8,
+    minDays: 1,
+    quantity: 2,
+    kitIncluded: [
+      "Костыль подмышечный",
+      "Регулируемая стойка",
+      "Подмышечная опора",
+      "Ручка",
+      "Резиновый наконечник",
+    ],
+    specifications: [
+      { label: "Тип", value: "подмышечный костыль" },
+      { label: "Максимальная нагрузка", value: "до 150 кг" },
+      { label: "Регулировка высоты", value: "есть" },
+      { label: "Назначение", value: "поддержка при ходьбе" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Использование", value: "дом, улица, реабилитация" },
+      { label: "Материал", value: "металл и пластик" },
+      { label: "Наконечник", value: "резиновый противоскользящий" },
+    ],
+    faq: [
+      {
+        q: "Для кого подходит подмышечный костыль?",
+        a: "Для людей, которым нужна временная поддержка при ходьбе после травм, операций или при ограниченной нагрузке на ногу.",
+      },
+      {
+        q: "Можно ли регулировать высоту?",
+        a: "Да, костыль регулируется по высоте, чтобы его было удобнее настроить под рост пользователя.",
+      },
+      {
+        q: "Подходит ли для улицы?",
+        a: "Да, костыль можно использовать дома и на улице, но важно учитывать покрытие и осторожно передвигаться по скользкой поверхности.",
+      },
+      {
+        q: "Нужен ли залог?",
+        a: "По этому товару залог не указан, стоимость аренды рассчитывается по дням.",
+      },
+      {
+        q: "Можно ли заказать доставку?",
+        a: "Да, для этого товара доступна доставка по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.underarmCrutch,
+  },
+  {
+    baseSlug: "kostyl-opornyy-reguliruemyy",
+    name: "Костыль опорный регулируемый",
+    category: "kostyli",
+    short:
+      "Опорный костыль для дополнительной устойчивости при ходьбе и реабилитации.",
+    fullDescription:
+      "Опорный костыль подходит для людей, которым нужна лёгкая дополнительная поддержка при ходьбе. Его удобно использовать после травм, при восстановлении, в быту и во время коротких перемещений. Высоту можно отрегулировать под пользователя.",
+    organization: "Prokatik",
+    brand: "Без бренда",
+    model: "регулируемый",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 7,
+    minDays: 1,
+    quantity: 2,
+    kitIncluded: [
+      "Костыль опорный",
+      "Регулируемая стойка",
+      "Ручка",
+      "Резиновый наконечник",
+    ],
+    specifications: [
+      { label: "Тип", value: "опорный костыль" },
+      { label: "Регулировка высоты", value: "есть" },
+      { label: "Назначение", value: "поддержка при ходьбе" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Использование", value: "дом и улица" },
+      { label: "Материал", value: "металл и пластик" },
+      { label: "Наконечник", value: "резиновый" },
+    ],
+    faq: [
+      {
+        q: "Чем опорный костыль отличается от подмышечного?",
+        a: "Опорный костыль обычно используют как дополнительную поддержку рукой, а подмышечный даёт более выраженную опору при разгрузке ноги.",
+      },
+      {
+        q: "Можно ли настроить костыль под рост?",
+        a: "Да, высота регулируется.",
+      },
+      {
+        q: "Подходит ли для пожилого человека?",
+        a: "Может подойти для дополнительной устойчивости, но при серьёзных ограничениях лучше подбирать средство опоры индивидуально.",
+      },
+      {
+        q: "Можно ли взять на один день?",
+        a: "Да, минимальный срок аренды — 1 день.",
+      },
+      {
+        q: "Есть ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.walkingCrutch,
+  },
+  {
+    baseSlug: "batut-400-sm",
+    name: "Батут 400 см",
+    category: "batuty",
+    short:
+      "Большой батут 400 см для активного отдыха детей и взрослых на участке.",
+    fullDescription:
+      "Батут диаметром 400 см подойдёт для дачи, частного дома, детского праздника и активных выходных. Хороший вариант, если батут нужен временно: на сезон, праздник, выходные или приезд гостей с детьми.",
+    organization: "Prokatik",
+    brand: "Без бренда",
+    model: "400 см",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 35,
+    minDays: 2,
+    quantity: 1,
+    kitIncluded: [
+      "Батут 400 см",
+      "Защитная сетка",
+      "Пружинный блок",
+      "Опорная рама",
+      "Лестница",
+    ],
+    specifications: [
+      { label: "Тип", value: "уличный батут" },
+      { label: "Диаметр", value: "400 см" },
+      { label: "Назначение", value: "активный отдых" },
+      { label: "Использование", value: "дача, двор, участок" },
+      { label: "Защитная сетка", value: "есть" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Установка", value: "на ровную площадку" },
+    ],
+    faq: [
+      {
+        q: "Для чего подойдёт батут?",
+        a: "Для дачи, двора, детского праздника, активных игр и временного использования на участке.",
+      },
+      {
+        q: "Есть ли защитная сетка?",
+        a: "Да, в комплект входит защитная сетка.",
+      },
+      {
+        q: "Можно ли арендовать на выходные?",
+        a: "Да, минимальный срок аренды — 2 дня.",
+      },
+      {
+        q: "Нужна ли ровная площадка?",
+        a: "Да, батут нужно устанавливать на ровной устойчивой поверхности.",
+      },
+      {
+        q: "Доставка доступна?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.trampoline,
+  },
+  {
+    baseSlug: "benzopila-oleo-mac-gsh-51",
+    name: "Бензопила Oleo-Mac GSH 51",
+    category: "benzopily",
+    short:
+      "Бензопила Oleo-Mac GSH 51 для распила дров, веток и работ на участке.",
+    fullDescription:
+      "Бензопила Oleo-Mac GSH 51 подходит для сезонных работ на даче, распила дров, веток, досок и ухода за участком. Удобный вариант для разовой задачи, когда покупать инструмент нецелесообразно.",
+    organization: "Prokatik",
+    brand: "Oleo-Mac",
+    model: "GSH 51",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 32,
+    minDays: 1,
+    quantity: 1,
+    kitIncluded: [
+      "Бензопила",
+      "Шина",
+      "Цепь",
+      "Защитный кожух шины",
+      "Ключ для обслуживания",
+    ],
+    specifications: [
+      { label: "Тип", value: "бензиновая цепная пила" },
+      { label: "Модель", value: "Oleo-Mac GSH 51" },
+      { label: "Назначение", value: "распил древесины" },
+      { label: "Использование", value: "сад, дача, участок" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Питание", value: "бензиновый двигатель" },
+      { label: "Комплектация", value: "шина, цепь, кожух" },
+    ],
+    faq: [
+      {
+        q: "Для каких работ подходит бензопила?",
+        a: "Для распила дров, веток, досок и сезонных работ на участке.",
+      },
+      {
+        q: "Можно ли взять на один день?",
+        a: "Да, минимальный срок аренды — 1 день.",
+      },
+      {
+        q: "Подходит ли для дачи?",
+        a: "Да, это один из основных сценариев аренды бензопилы.",
+      },
+      {
+        q: "Что входит в комплект?",
+        a: "Бензопила, шина, цепь, кожух шины и ключ для обслуживания.",
+      },
+      {
+        q: "Есть ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.chainsaw,
+  },
+  {
+    baseSlug: "teplovizor-ermenrich-seek-tv50",
+    name: "Тепловизор Ermenrich Seek TV50",
+    category: "teplovizory",
+    short:
+      "Тепловизор Ermenrich Seek TV50 для поиска теплопотерь и диагностики помещений.",
+    fullDescription:
+      "Тепловизор Ermenrich Seek TV50 помогает проверить теплопотери, окна, стены, отопление, электрику и инженерные системы. Подходит для диагностики квартиры, дома, офиса или объекта перед ремонтом.",
+    organization: "Prokatik",
+    brand: "Ermenrich",
+    model: "Seek TV50",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 45,
+    minDays: 1,
+    quantity: 1,
+    kitIncluded: ["Тепловизор", "Кабель зарядки", "Чехол", "Инструкция"],
+    specifications: [
+      { label: "Тип", value: "тепловизор" },
+      { label: "Модель", value: "Ermenrich Seek TV50" },
+      { label: "Назначение", value: "тепловая диагностика" },
+      { label: "Использование", value: "дом, квартира, офис, объект" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Подходит для", value: "поиска теплопотерь" },
+      { label: "Комплектация", value: "тепловизор, кабель, чехол" },
+    ],
+    faq: [
+      {
+        q: "Для чего нужен тепловизор?",
+        a: "Для поиска теплопотерь, промерзаний, перегрева проводки, проблем с отоплением, окнами и стенами.",
+      },
+      {
+        q: "Подходит ли для проверки квартиры?",
+        a: "Да, тепловизор удобно использовать для проверки квартиры, дома или офиса.",
+      },
+      {
+        q: "Можно ли взять на один день?",
+        a: "Да, минимальный срок аренды — 1 день.",
+      },
+      {
+        q: "Нужны ли специальные навыки?",
+        a: "Базовую проверку можно выполнить самостоятельно, но для профессионального заключения лучше обращаться к специалисту.",
+      },
+      {
+        q: "Доступна ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.thermalCamera,
+  },
+  {
+    baseSlug: "palatka-atemi-angara-3",
+    name: "Палатка Atemi Angara 3",
+    category: "palatki",
+    short:
+      "Туристическая палатка Atemi Angara 3 для кемпинга, рыбалки и отдыха на природе.",
+    fullDescription:
+      "Палатка Atemi Angara 3 подходит для поездки на природу, кемпинга, рыбалки, фестиваля или отдыха с семьёй. Удобный вариант для временной аренды на выходные или отпуск.",
+    organization: "Prokatik",
+    brand: "Atemi",
+    model: "Angara 3",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 20,
+    minDays: 2,
+    quantity: 1,
+    kitIncluded: [
+      "Палатка",
+      "Дуги",
+      "Колышки",
+      "Растяжки",
+      "Чехол для переноски",
+    ],
+    specifications: [
+      { label: "Тип", value: "туристическая палатка" },
+      { label: "Модель", value: "Atemi Angara 3" },
+      { label: "Назначение", value: "кемпинг и отдых" },
+      { label: "Использование", value: "природа, рыбалка, фестиваль" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Комплектация", value: "палатка, дуги, колышки, чехол" },
+      { label: "Минимальный срок", value: "2 дня" },
+    ],
+    faq: [
+      {
+        q: "Для чего подойдёт палатка?",
+        a: "Для кемпинга, рыбалки, отдыха на природе, фестивалей и поездок на выходные.",
+      },
+      {
+        q: "Что входит в комплект?",
+        a: "Палатка, дуги, колышки, растяжки и чехол для переноски.",
+      },
+      {
+        q: "Можно ли взять на выходные?",
+        a: "Да, минимальный срок аренды — 2 дня.",
+      },
+      {
+        q: "Подходит ли для поездки на природу?",
+        a: "Да, палатка рассчитана на туристическое и кемпинговое использование.",
+      },
+      {
+        q: "Есть ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.tent,
+  },
+  {
+    baseSlug: "mini-trenazher-alpin",
+    name: "Мини-тренажёр Alpin",
+    category: "trenazhery",
+    short:
+      "Компактный мини-тренажёр Alpin для домашних тренировок и восстановления активности.",
+    fullDescription:
+      "Мини-тренажёр Alpin подходит для лёгких домашних тренировок, поддержания активности, восстановления после перерыва и занятий в удобном темпе. Благодаря компактному размеру его удобно использовать дома.",
+    organization: "Prokatik",
+    brand: "Alpin",
+    model: "Mini",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 18,
+    minDays: 2,
+    quantity: 1,
+    kitIncluded: [
+      "Мини-тренажёр",
+      "Педальный блок",
+      "Регулятор нагрузки",
+      "Инструкция",
+    ],
+    specifications: [
+      { label: "Тип", value: "мини-тренажёр" },
+      { label: "Бренд", value: "Alpin" },
+      { label: "Назначение", value: "домашние тренировки" },
+      { label: "Использование", value: "дом, квартира, восстановление" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Регулировка нагрузки", value: "есть" },
+      { label: "Формат", value: "компактный" },
+    ],
+    faq: [
+      {
+        q: "Для чего подходит мини-тренажёр?",
+        a: "Для лёгких домашних тренировок, поддержания активности и занятий в спокойном темпе.",
+      },
+      {
+        q: "Можно ли использовать дома?",
+        a: "Да, тренажёр компактный и подходит для домашнего использования.",
+      },
+      {
+        q: "Есть ли регулировка нагрузки?",
+        a: "Да, предусмотрена регулировка нагрузки.",
+      },
+      {
+        q: "Можно ли взять на несколько дней?",
+        a: "Да, минимальный срок аренды — 2 дня.",
+      },
+      {
+        q: "Доступна ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.miniTrainer,
+  },
+  {
+    baseSlug: "lestnitsa-novaya-vysota-nv-123",
+    name: "Лестница Новая Высота NV 123",
+    category: "lestnitsy",
+    short:
+      "Универсальная лестница Новая Высота NV 123 для ремонта, монтажа и бытовых работ.",
+    fullDescription:
+      "Лестница Новая Высота NV 123 подходит для ремонта, покраски, монтажа, работ на даче, в доме или на объекте. Удобный вариант, если лестница нужна на короткий срок.",
+    organization: "Prokatik",
+    brand: "Новая Высота",
+    model: "NV 123",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 22,
+    minDays: 1,
+    quantity: 1,
+    kitIncluded: ["Лестница", "Опорные элементы", "Фиксаторы секций"],
+    specifications: [
+      { label: "Тип", value: "универсальная лестница" },
+      { label: "Модель", value: "Новая Высота NV 123" },
+      { label: "Назначение", value: "ремонт и монтаж" },
+      { label: "Использование", value: "дом, дача, объект" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Минимальный срок", value: "1 день" },
+      { label: "Подходит для", value: "работ на высоте" },
+    ],
+    faq: [
+      {
+        q: "Для каких работ подходит лестница?",
+        a: "Для ремонта, покраски, монтажа, работ на даче, в доме или на объекте.",
+      },
+      {
+        q: "Можно ли взять на один день?",
+        a: "Да, минимальный срок аренды — 1 день.",
+      },
+      {
+        q: "Подходит ли для квартиры?",
+        a: "Да, лестницу можно использовать для бытовых и ремонтных задач.",
+      },
+      {
+        q: "Нужен ли залог?",
+        a: "По этому товару залог не указан.",
+      },
+      {
+        q: "Есть ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.ladder,
+  },
+  {
+    baseSlug: "svarochnyy-apparat-dlya-plastikovyh-trub-dwp-800",
+    name: "Сварочный аппарат для пластиковых труб DWP 800",
+    category: "svarochnye-apparaty",
+    short:
+      "Аппарат DWP 800 для сварки пластиковых труб при ремонте и монтаже сантехники.",
+    fullDescription:
+      "Сварочный аппарат DWP 800 предназначен для работ с пластиковыми трубами. Подходит для бытового ремонта, монтажа водопровода, замены труб и разовых сантехнических задач.",
+    organization: "Prokatik",
+    brand: "DWP",
+    model: "800",
+    condition: "good",
+    depositBYN: 0,
+    pricePerDayBYN: 25,
+    minDays: 1,
+    quantity: 1,
+    kitIncluded: [
+      "Сварочный аппарат",
+      "Насадки",
+      "Подставка",
+      "Кейс",
+      "Инструкция",
+    ],
+    specifications: [
+      { label: "Тип", value: "аппарат для сварки пластиковых труб" },
+      { label: "Модель", value: "DWP 800" },
+      { label: "Назначение", value: "сварка пластиковых труб" },
+      { label: "Использование", value: "ремонт, монтаж, сантехника" },
+      { label: "Состояние", value: "хорошее" },
+      { label: "Комплектация", value: "аппарат, насадки, кейс" },
+      { label: "Минимальный срок", value: "1 день" },
+    ],
+    faq: [
+      {
+        q: "Для чего нужен этот сварочный аппарат?",
+        a: "Для сварки пластиковых труб при ремонте, монтаже водопровода и сантехнических работах.",
+      },
+      {
+        q: "Что входит в комплект?",
+        a: "Сварочный аппарат, насадки, подставка, кейс и инструкция.",
+      },
+      {
+        q: "Можно ли взять на один день?",
+        a: "Да, минимальный срок аренды — 1 день.",
+      },
+      {
+        q: "Подходит ли для домашнего ремонта?",
+        a: "Да, аппарат подходит для бытовых задач и разового монтажа пластиковых труб.",
+      },
+      {
+        q: "Есть ли доставка?",
+        a: "Да, доставка доступна по городу.",
+      },
+    ],
+    images: PRODUCT_IMAGES.pipeWelder,
+  },
+];
+
+const PRODUCTS: SeedProductInput[] = SEED_CITIES.flatMap((cityItem) =>
+  PRODUCT_TEMPLATES.map((template) => {
+    const { baseSlug, ...product } = template;
+
+    return {
+      ...product,
+      slug: `${baseSlug}-${cityItem.citySlug}`,
+      city: cityItem.city,
+      citySlug: cityItem.citySlug,
+      pickupAddress: cityItem.pickupAddress,
+      deliveryAvailable: cityItem.deliveryAvailable,
+    };
+  }),
+);
+
+/* const PRODUCTS: SeedProductInput[] = [
   {
     name: "Шуруповёрт Bosch GSR 18V с 2 аккумуляторами",
     category: "instrumenty",
@@ -450,8 +1054,7 @@ const PRODUCTS: SeedProductInput[] = [
   {
     name: "Камера Sony Alpha для съёмки",
     category: "dlya-foto-i-video",
-    short:
-      "Камера для фото, видео, контента, интервью и съёмочных дней.",
+    short: "Камера для фото, видео, контента, интервью и съёмочных дней.",
     fullDescription:
       "Подходит для фотосессий, съёмки reels, интервью, мероприятий, контента и тестирования техники перед покупкой.",
     brand: "Sony",
@@ -539,7 +1142,7 @@ const PRODUCTS: SeedProductInput[] = [
     ],
     images: placeholderImages("trimmer-benzin"),
   },
-];
+]; */
 
 function assertEnv() {
   if (!MONGODB_URI) {
@@ -593,7 +1196,8 @@ function buildProductDoc(
     short: input.short.trim(),
     fullDescription: normalizeOptionalText(input.fullDescription),
 
-    organization: normalizeOptionalText(input.organization) ?? DEFAULT_ORGANIZATION,
+    organization:
+      normalizeOptionalText(input.organization) ?? DEFAULT_ORGANIZATION,
     brand: normalizeOptionalText(input.brand),
     model: normalizeOptionalText(input.model),
     condition: input.condition ?? DEFAULT_CONDITION,
@@ -682,7 +1286,10 @@ async function upsertProduct(
   return "created";
 }
 
-async function printSummary(collection: Collection<ProductDoc>, owner: UserType) {
+async function printSummary(
+  collection: Collection<ProductDoc>,
+  owner: UserType,
+) {
   const totalOwnerProducts = await collection.countDocuments({
     ownerId: owner._id,
   });
