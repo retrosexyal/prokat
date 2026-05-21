@@ -233,7 +233,7 @@ export function ProductCard({
         open={isBookingModalOpen}
         title={`Бронирование: ${name}`}
         onClose={() => setIsBookingModalOpen(false)}
-        panelClassName="max-h-[90vh] w-full max-w-[680px] overflow-y-auto rounded-2xl bg-background p-4 shadow-xl sm:p-6"
+        panelClassName="max-h-[90vh] w-full max-w-[680px] rounded-2xl bg-background p-4 shadow-xl sm:p-6"
       >
         <ProductBookingForm
           productId={productId}

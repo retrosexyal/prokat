@@ -126,9 +126,22 @@ function BookingCalendarModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-border-subtle px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/20"
+            aria-label="Close calendar"
           >
-            Закрыть
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
           </button>
         </div>
 

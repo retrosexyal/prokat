@@ -62,16 +62,44 @@ export function Modal({
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={panelClassName}
+        className={[
+          "relative flex max-h-[90vh] flex-col overflow-hidden",
+          panelClassName,
+        ].join(" ")}
         onClick={(event) => event.stopPropagation()}
       >
-        {title ? (
-          <h2 id="modal-title" className="mb-3 text-xl font-semibold">
-            {title}
-          </h2>
-        ) : null}
+        <div className="flex shrink-0 items-start justify-between gap-4 pb-3">
+          {title ? (
+            <h2 id="modal-title" className="text-xl font-semibold">
+              {title}
+            </h2>
+          ) : (
+            <div />
+          )}
 
-        {children}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/90 text-zinc-500 shadow-sm transition hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/20"
+            aria-label="Close modal"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>,
     document.body,
