@@ -225,14 +225,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <ProductHeroSection
               product={product}
               categoryName={categoryDoc.name}
-              cityNameIn={city.nameIn}
               pageTitle={pageTitle}
-              titleMain={titleMain}
-              seoDescriptionParagraph={seoDescriptionParagraph}
             />
 
             <ProductContentSections
               product={product}
+              categoryName={categoryDoc.name}
+              cityNameIn={city.nameIn}
+              titleMain={titleMain}
+              seoDescriptionParagraph={seoDescriptionParagraph}
               fullDescription={fullDescription}
               faqItems={faqItems}
             />

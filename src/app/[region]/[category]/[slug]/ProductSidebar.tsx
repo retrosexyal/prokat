@@ -9,66 +9,48 @@ type Props = {
 
 export function ProductSidebar({ product }: Props) {
   return (
-    <aside className="hidden space-y-4 md:block">
+    <aside className="hidden md:block">
       <div
         id="product-booking"
-        className="sticky top-24 rounded-2xl border border-border-subtle bg-white p-5 shadow-sm"
+        className="sticky top-4 flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-sm"
       >
-        <h2 className="mb-3 text-sm font-semibold text-zinc-900">
-          Тариф аренды
-        </h2>
+        <div className="shrink-0 p-5">
+          <h2 className="mb-3 text-sm font-semibold text-zinc-900">
+            Тариф аренды
+          </h2>
 
-        <PriceBlock
-          pricePerDay={product.pricePerDayBYN}
-          pricePerWeek={product.pricePerWeekBYN}
-          pricePerMonth={product.pricePerMonthBYN}
-        />
+          <PriceBlock
+            pricePerDay={product.pricePerDayBYN}
+            pricePerWeek={product.pricePerWeekBYN}
+            pricePerMonth={product.pricePerMonthBYN}
+          />
 
-        <p className="mt-3 text-sm text-zinc-600">
-          Минимум {product.minDays} дн.
-        </p>
+          <div className="mt-3 space-y-1 text-sm text-zinc-600">
+            <p>Минимум {product.minDays} дн.</p>
 
-        {!!product.depositBYN && (
-          <p className="mt-1 text-sm text-zinc-600">
-            Залог: {product.depositBYN} BYN
-          </p>
-        )}
+            {!!product.depositBYN && <p>Залог: {product.depositBYN} BYN</p>}
 
-        <p className="mt-1 text-sm text-zinc-700">Город: {product.city}</p>
+            <p>Город: {product.city}</p>
 
-        <p className="mt-1 text-sm text-zinc-700">
-          Состояние: {getConditionLabel(product.condition)}
-        </p>
+            <p>Состояние: {getConditionLabel(product.condition)}</p>
 
-        <p className="mt-1 text-sm text-zinc-700">
-          Доставка: {product.deliveryAvailable ? "есть" : "нет"}
-        </p>
+            <p>Доставка: {product.deliveryAvailable ? "есть" : "нет"}</p>
 
-        {product.pickupAddress && (
-          <div className="mt-2">
-            <p className="mt-1 text-sm text-zinc-600">Адрес самовывоза:</p>
-            <p className="mt-1 text-sm text-zinc-700">
-              {product.pickupAddress}
-            </p>
+            {product.pickupAddress ? (
+              <p>Самовывоз: {product.pickupAddress}</p>
+            ) : null}
           </div>
-        )}
+        </div>
 
-        <div className="mt-5">
+        <div className="min-h-0 flex-1 overflow-hidden border-t border-zinc-100 px-5 py-4">
           <ProductBookingForm
             productId={product._id!.toString()}
             minDays={product.minDays}
             totalQuantity={product.quantity ?? 1}
             ownerPhone={product.ownerPhone}
+            stickySubmit
           />
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-border-subtle bg-white p-4 text-sm text-zinc-600 shadow-sm">
-        <p>Проверяйте комплект и состояние товара при получении.</p>
-        <p className="mt-2">
-          Детали выдачи, возврата и продления аренды согласуются после
-          подтверждения бронирования.
-        </p>
       </div>
     </aside>
   );

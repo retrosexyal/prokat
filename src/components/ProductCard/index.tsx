@@ -166,16 +166,24 @@ export function ProductCard({
             />
           </div>
 
-          <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+          <div
+            className={[
+              "mt-auto grid items-center gap-2 pt-4",
+              isHideButton ? "grid-cols-1" : "grid-cols-2",
+            ].join(" ")}
+          >
             {!isHideButton && (
-              <Button onClick={() => setIsBookingModalOpen(true)}>
+              <Button
+                onClick={() => setIsBookingModalOpen(true)}
+                newClasses="min-w-0 w-full !px-3"
+              >
                 Арендовать
               </Button>
             )}
 
             <Link
               href={productHref}
-              className="text-sm text-gray-500 hover:text-black"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-transparent px-3 text-center text-sm font-medium text-gray-500 transition hover:border-zinc-200 hover:bg-zinc-50 hover:text-black"
               aria-label={`Открыть карточку товара ${name}`}
             >
               Подробнее

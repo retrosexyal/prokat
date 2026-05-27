@@ -36,7 +36,7 @@ export function RelatedProductsSection({
         {moreHref && moreLabel ? (
           <Link
             href={moreHref}
-            className="inline-flex items-center rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+            className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-200 px-5 py-2 text-center text-sm font-medium leading-5 text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 sm:min-w-32"
           >
             {moreLabel}
           </Link>

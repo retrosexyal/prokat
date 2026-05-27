@@ -32,6 +32,7 @@ type Props = {
   totalQuantity?: number;
   ownerPhone?: string;
   pickupAddress?: string;
+  stickySubmit?: boolean;
 };
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -237,6 +238,7 @@ export function ProductBookingForm({
   ownerPhone,
   pickupAddress,
   totalQuantity = 1,
+  stickySubmit = false,
 }: Props) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
@@ -588,154 +590,173 @@ export function ProductBookingForm({
     startDate,
   ]);
 
+  const submitButton = !success ? (
+    <button
+      type="submit"
+      disabled={loading || loadingBusyDates || !acceptedLegal}
+      className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
+    >
+      {loading ? "Отправка..." : "Забронировать"}
+    </button>
+  ) : null;
+
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {ownerPhone ? (
-          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
-            <div className="text-sm font-medium text-zinc-900">
-              Телефон владельца
-            </div>
-            <a
-              href={`tel:${ownerPhone}`}
-              className="mt-1 inline-block text-sm font-medium text-accent-strong hover:underline"
-            >
-              {ownerPhone}
-            </a>
-            <p className="mt-1 text-xs text-zinc-500">
-              Можете сразу позвонить для уточнения деталей аренды
-            </p>
-          </div>
-        ) : null}
-        {pickupAddress ? (
-          <div className="text-sm text-zinc-600">
-            Адрес самовывоза: {pickupAddress}
-          </div>
-        ) : null}
-
-        <div>
-          <label className="mb-1.5 block text-sm text-zinc-700">
-            Телефон для связи
-          </label>
-          <input
-            type="tel"
-            required
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
-            placeholder="+375 (29) 123-45-67"
-          />
-        </div>
-
-        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+      <form
+        onSubmit={handleSubmit}
+        className={stickySubmit ? "flex h-full min-h-0 flex-col" : "space-y-4"}
+      >
+        <div
+          className={
+            stickySubmit
+              ? "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1"
+              : "space-y-4"
+          }
+        >
+          {ownerPhone ? (
+            <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
               <div className="text-sm font-medium text-zinc-900">
-                Даты аренды
+                Телефон владельца
               </div>
+              <a
+                href={`tel:${ownerPhone}`}
+                className="mt-1 inline-block text-sm font-medium text-accent-strong hover:underline"
+              >
+                {ownerPhone}
+              </a>
               <p className="mt-1 text-xs text-zinc-500">
-                Прошедшие и занятые даты недоступны
+                Можете сразу позвонить для уточнения деталей аренды
               </p>
             </div>
+          ) : null}
+          {pickupAddress ? (
+            <div className="text-sm text-zinc-600">
+              Адрес самовывоза: {pickupAddress}
+            </div>
+          ) : null}
 
-            <button
-              type="button"
-              onClick={() => setCalendarOpen(true)}
-              className="shrink-0 rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-black transition hover:bg-accent"
-            >
-              Выбрать
-            </button>
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-700">
+              Телефон для связи
+            </label>
+            <input
+              type="tel"
+              required
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+              placeholder="+375 (29) 123-45-67"
+            />
           </div>
 
-          <div className="mt-3 rounded-2xl bg-zinc-50 p-4">
+          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-900">
+                  Даты аренды
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Прошедшие и занятые даты недоступны
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCalendarOpen(true)}
+                className="shrink-0 rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-black transition hover:bg-accent"
+              >
+                Выбрать
+              </button>
+            </div>
+
+            <div className="mt-3 rounded-2xl bg-zinc-50 p-4">
+              <div className="text-sm font-medium text-zinc-900">
+                {selectedLabel}
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
+                {selectedDaysCount > 0 ? (
+                  <span>Дней: {selectedDaysCount}</span>
+                ) : null}
+                <span>
+                  {minDays > 1
+                    ? `Минимальный срок: ${minDays} дн.`
+                    : "Можно выбрать один день"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
             <div className="text-sm font-medium text-zinc-900">
-              {selectedLabel}
+              Количество в наличии
+            </div>
+            <p className="mt-1 text-sm text-zinc-600">
+              Всего доступно для параллельной аренды: {resolvedQuantity}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-700">
+              Сообщение владельцу
+            </label>
+            <textarea
+              rows={3}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+              placeholder="Например: нужен с утра, могу забрать сам"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
+            <div className="mb-2 text-sm font-medium text-zinc-900">
+              Уже забронированные даты
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
-              {selectedDaysCount > 0 ? (
-                <span>Дней: {selectedDaysCount}</span>
-              ) : null}
-              <span>
-                {minDays > 1
-                  ? `Минимальный срок: ${minDays} дн.`
-                  : "Можно выбрать один день"}
-              </span>
-            </div>
+            {loadingBusyDates ? (
+              <div className="text-sm text-zinc-500">Загрузка...</div>
+            ) : activeBusyRanges.length === 0 ? (
+              <div className="text-sm text-zinc-500">
+                Пока нет активных бронирований
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {activeBusyRanges.map((range) => (
+                  <div
+                    key={range._id ?? `${range.startDate}-${range.endDate}`}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700"
+                  >
+                    {formatDate(range.startDate)} — {formatDate(range.endDate)}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
-          <div className="text-sm font-medium text-zinc-900">
-            Количество в наличии
-          </div>
-          <p className="mt-1 text-sm text-zinc-600">
-            Всего доступно для параллельной аренды: {resolvedQuantity}
-          </p>
-        </div>
+          {conflictText ? (
+            <div className="text-sm text-red-600">{conflictText}</div>
+          ) : null}
 
-        <div>
-          <label className="mb-1.5 block text-sm text-zinc-700">
-            Сообщение владельцу
-          </label>
-          <textarea
-            rows={3}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
-            placeholder="Например: нужен с утра, могу забрать сам"
+          {error ? <div className="text-sm text-red-600">{error}</div> : null}
+          {success ? (
+            <div className="text-sm text-emerald-600">{success}</div>
+          ) : null}
+
+          <LegalConsent
+            checked={acceptedLegal}
+            onChange={setAcceptedLegal}
+            id={`booking-legal-consent-${productId}`}
+            label="Я подтверждаю, что ознакомлен(а) с порядком обработки моих персональных данных при отправке заявки на бронирование."
           />
         </div>
 
-        <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
-          <div className="mb-2 text-sm font-medium text-zinc-900">
-            Уже забронированные даты
+        {stickySubmit && submitButton ? (
+          <div className="shrink-0 border-t border-zinc-100 bg-white pt-3">
+            {submitButton}
           </div>
-
-          {loadingBusyDates ? (
-            <div className="text-sm text-zinc-500">Загрузка...</div>
-          ) : activeBusyRanges.length === 0 ? (
-            <div className="text-sm text-zinc-500">
-              Пока нет активных бронирований
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {activeBusyRanges.map((range) => (
-                <div
-                  key={range._id ?? `${range.startDate}-${range.endDate}`}
-                  className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700"
-                >
-                  {formatDate(range.startDate)} — {formatDate(range.endDate)}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {conflictText ? (
-          <div className="text-sm text-red-600">{conflictText}</div>
-        ) : null}
-
-        {error ? <div className="text-sm text-red-600">{error}</div> : null}
-        {success ? (
-          <div className="text-sm text-emerald-600">{success}</div>
-        ) : null}
-
-        <LegalConsent
-          checked={acceptedLegal}
-          onChange={setAcceptedLegal}
-          id={`booking-legal-consent-${productId}`}
-          label="Я подтверждаю, что ознакомлен(а) с порядком обработки моих персональных данных при отправке заявки на бронирование."
-        />
-
-        {!success && (
-          <button
-            type="submit"
-            disabled={loading || loadingBusyDates || !acceptedLegal}
-            className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-black transition hover:bg-accent disabled:opacity-60"
-          >
-            {loading ? "Отправка..." : "Забронировать"}
-          </button>
+        ) : (
+          submitButton
         )}
       </form>
 
