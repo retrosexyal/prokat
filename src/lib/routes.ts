@@ -9,6 +9,7 @@ export const API_ROUTES = {
   adminImageDelete: (publicId: string) =>
     `/api/admin/images?publicId=${encodeURIComponent(publicId)}`,
   bookings: "/api/bookings",
+  guestBookings: "/api/bookings/guest",
   me: "/api/users/me",
   bookingById: (id: string) => `/api/bookings/${id}`,
 

@@ -15,6 +15,8 @@ export type BookingDoc = {
   renterId?: ObjectId;
   renterEmail?: string;
   guestIpAddress?: string;
+  guestAccessTokenHash?: string;
+  guestAccessTokenCreatedAt?: Date;
   phone: string;
   message?: string;
   startDate: Date;
@@ -47,8 +49,10 @@ export type BookingView = {
     _id?: string;
     name: string;
     slug: string;
+    category: string;
     images: string[];
     pricePerDayBYN: number;
     city: string;
+    citySlug: string;
   };
 };

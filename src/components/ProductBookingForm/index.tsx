@@ -16,6 +16,8 @@ import { API_ROUTES } from "@/lib/routes";
 import { useIsMobile } from "@/hook";
 
 import { LegalConsent } from "@/components/LegalConsent";
+import { upsertGuestBooking } from "@/lib/guest-booking-storage";
+import type { BookingView } from "@/types/booking";
 
 type BusyRange = {
   _id?: string;
@@ -225,6 +227,10 @@ type BusyRangesResponse = {
   bookings: BusyRange[];
 };
 
+type CreateBookingResponse = BookingView & {
+  guestAccessToken?: string;
+};
+
 export function ProductBookingForm({
   productId,
   minDays = 1,
@@ -244,6 +250,7 @@ export function ProductBookingForm({
   const [error, setError] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [hydratedDraftKey, setHydratedDraftKey] = useState<string | null>(null);
 
   const bookingDraftStorageKey = `booking-draft:${productId}`;
 
@@ -359,7 +366,7 @@ export function ProductBookingForm({
     return overlappingCount >= resolvedQuantity
       ? "На выбранные даты свободного количества товара уже нет"
       : "";
-  }, [activeBusyRanges, startDate, endDate]);
+  }, [activeBusyRanges, endDate, resolvedQuantity, startDate]);
 
   function applyCalendarRange(range: DateRange | undefined): void {
     setError("");
@@ -449,14 +456,22 @@ export function ProductBookingForm({
     }
 
     try {
-      await api.post(API_ROUTES.bookings, {
-        productId,
-        phone,
-        message,
-        startDate,
-        endDate,
-        acceptedPrivacyPolicy: acceptedLegal,
-      });
+      const createResponse = await api.post<CreateBookingResponse>(
+        API_ROUTES.bookings,
+        {
+          productId,
+          phone,
+          message,
+          startDate,
+          endDate,
+          acceptedPrivacyPolicy: acceptedLegal,
+        },
+      );
+
+      upsertGuestBooking(
+        createResponse.data,
+        createResponse.data.guestAccessToken,
+      );
 
       setSuccess("Бронирование отправлено. С вами свяжутся.");
       setPhone("");
@@ -465,7 +480,7 @@ export function ProductBookingForm({
       setEndDate("");
 
       if (typeof window !== "undefined") {
-        sessionStorage.removeItem(bookingDraftStorageKey);
+        localStorage.removeItem(bookingDraftStorageKey);
       }
 
       const response = await api.get<BusyRangesResponse>(
@@ -497,10 +512,18 @@ export function ProductBookingForm({
       : `${formatDate(startDate)} — выберите дату окончания`;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    setHydratedDraftKey(null);
 
-    const raw = sessionStorage.getItem(bookingDraftStorageKey);
-    if (!raw) return;
+    if (typeof window === "undefined") {
+      setHydratedDraftKey(bookingDraftStorageKey);
+      return;
+    }
+
+    const raw = localStorage.getItem(bookingDraftStorageKey);
+    if (!raw) {
+      setHydratedDraftKey(bookingDraftStorageKey);
+      return;
+    }
 
     try {
       const draft = JSON.parse(raw) as {
@@ -526,9 +549,44 @@ export function ProductBookingForm({
         setEndDate(draft.endDate);
       }
     } catch {
-      sessionStorage.removeItem(bookingDraftStorageKey);
+      localStorage.removeItem(bookingDraftStorageKey);
+    } finally {
+      setHydratedDraftKey(bookingDraftStorageKey);
     }
   }, [bookingDraftStorageKey]);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      hydratedDraftKey !== bookingDraftStorageKey
+    ) {
+      return;
+    }
+
+    const hasDraft = Boolean(phone || message || startDate || endDate);
+
+    if (!hasDraft) {
+      localStorage.removeItem(bookingDraftStorageKey);
+      return;
+    }
+
+    localStorage.setItem(
+      bookingDraftStorageKey,
+      JSON.stringify({
+        phone,
+        message,
+        startDate,
+        endDate,
+      }),
+    );
+  }, [
+    bookingDraftStorageKey,
+    endDate,
+    hydratedDraftKey,
+    message,
+    phone,
+    startDate,
+  ]);
 
   return (
     <>

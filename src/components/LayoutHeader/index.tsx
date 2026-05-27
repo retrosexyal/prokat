@@ -1,21 +1,27 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { getServerSession } from "next-auth/next";
 import { CatalogSearch } from "@/components/CatalogSearch";
 import { CitySelector } from "@/components/CitySelector";
 import { getRequestCity } from "@/lib/request-city";
 import { isRegionSlug, type RegionSlug } from "@/lib/cities";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 type LayoutHeaderProps = {
   forcedRegion?: string;
 };
 
 export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
-  const requestCity = await getRequestCity();
+  const [requestCity, session] = await Promise.all([
+    getRequestCity(),
+    getServerSession(authOptions),
+  ]);
 
   const initialRegion: RegionSlug =
     forcedRegion && isRegionSlug(forcedRegion)
       ? forcedRegion
       : requestCity.slug;
+  const showGuestBookingsLink = !session?.user?.email;
 
   return (
     <header className="border-b border-border-subtle bg-header">
@@ -46,7 +52,7 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
           </Link>
         </div>
 
-        <div className="mt-3 flex items-center gap-3 md:hidden">
+        <div className="mt-3 flex items-center gap-3 overflow-x-auto pb-1 md:hidden">
           <div className="min-w-0 flex-1">
             <CitySelector initialRegion={initialRegion} />
           </div>
@@ -64,6 +70,15 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
           >
             Контакты
           </Link>
+
+          {showGuestBookingsLink ? (
+            <Link
+              href="/my-bookings"
+              className="shrink-0 rounded-full border border-border-subtle bg-white px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Мои брони
+            </Link>
+          ) : null}
         </div>
 
         <div className="mt-3 md:hidden">
@@ -112,6 +127,15 @@ export async function LayoutHeader({ forcedRegion }: LayoutHeaderProps = {}) {
             >
               Контакты
             </Link>
+
+            {showGuestBookingsLink ? (
+              <Link
+                href="/my-bookings"
+                className="rounded-md px-3 py-2 hover:bg-zinc-100"
+              >
+                Мои брони
+              </Link>
+            ) : null}
 
             <Link
               href="/dashboard"

@@ -22,13 +22,15 @@ export function toBookingView(booking: BookingWithProduct): BookingView {
     updatedAt: booking.updatedAt.toISOString(),
     product: booking.product
       ? {
-          _id: booking.product._id?.toString(),
-          name: booking.product.name,
-          slug: booking.product.slug,
-          images: booking.product.images,
-          pricePerDayBYN: booking.product.pricePerDayBYN,
-          city: booking.product.city,
-        }
+        _id: booking.product._id?.toString(),
+        name: booking.product.name,
+        slug: booking.product.slug,
+        category: booking.product.category,
+        images: booking.product.images,
+        pricePerDayBYN: booking.product.pricePerDayBYN,
+        city: booking.product.city,
+        citySlug: booking.product.citySlug,
+      }
       : undefined,
   };
 }

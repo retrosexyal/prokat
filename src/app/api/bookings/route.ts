@@ -9,6 +9,10 @@ import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
 import { notifyUser } from "@/lib/user-notifications";
+import {
+  createGuestBookingAccessToken,
+  hashGuestBookingAccessToken,
+} from "@/lib/guest-booking-tokens";
 
 const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
 
@@ -209,6 +213,8 @@ export async function POST(request: Request) {
   const guestIpAddress = !session?.user?.email
     ? getClientIpAddress(request)
     : undefined;
+  let guestAccessToken: string | undefined;
+  let guestAccessTokenHash: string | undefined;
 
   if (!session?.user?.email) {
     if (!guestIpAddress) {
@@ -256,6 +262,9 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+
+    guestAccessToken = createGuestBookingAccessToken();
+    guestAccessTokenHash = hashGuestBookingAccessToken(guestAccessToken);
   }
 
   const booking = await createBooking({
@@ -264,6 +273,8 @@ export async function POST(request: Request) {
     renterId,
     renterEmail,
     guestIpAddress,
+    guestAccessTokenHash,
+    guestAccessTokenCreatedAt: guestAccessToken ? new Date() : undefined,
     phone,
     message: message || undefined,
     startDate,
@@ -292,5 +303,14 @@ export async function POST(request: Request) {
     console.error("Booking created, but notification failed:", error);
   }
 
-  return NextResponse.json(toBookingView(booking), { status: 201 });
+  return NextResponse.json(
+    {
+      ...toBookingView({
+        ...booking,
+        product,
+      }),
+      guestAccessToken,
+    },
+    { status: 201 },
+  );
 }
