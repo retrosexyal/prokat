@@ -1,4 +1,51 @@
-import type { ProductCondition, ProductFaqItem } from "@/types/product";
+import type {
+  ProductCondition,
+  ProductDoc,
+  ProductFaqItem,
+} from "@/types/product";
+
+const GENERIC_BRANDS = new Set([
+  "без бренда",
+  "no brand",
+  "noname",
+  "no name",
+]);
+
+function normalizeComparable(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export function isMeaningfulBrand(brand?: string): boolean {
+  const normalized = normalizeComparable(brand ?? "");
+  return normalized.length > 0 && !GENERIC_BRANDS.has(normalized);
+}
+
+function includesTerm(value: string, term?: string): boolean {
+  const normalizedTerm = normalizeComparable(term ?? "");
+
+  if (!normalizedTerm) {
+    return false;
+  }
+
+  return normalizeComparable(value).includes(normalizedTerm);
+}
+
+export function buildProductTitleMain(
+  product: Pick<ProductDoc, "name" | "brand" | "model">,
+): string {
+  const name = product.name.trim();
+  const parts = [name];
+
+  if (isMeaningfulBrand(product.brand) && !includesTerm(name, product.brand)) {
+    parts.push(product.brand!.trim());
+  }
+
+  if (product.model?.trim() && !includesTerm(name, product.model)) {
+    parts.push(product.model.trim());
+  }
+
+  return parts.join(" ").trim();
+}
 
 export function getConditionLabel(condition?: ProductCondition): string {
   switch (condition) {
@@ -90,7 +137,7 @@ export function buildSeoDescriptionParagraph(params: {
   } = params;
 
   return [
-    `${titleMain || productName} — товар из категории «${categoryName}», доступный для аренды в ${cityNameIn}.`,
+    `${titleMain || productName} — товар из категории «${categoryName}», доступный для аренды и проката в ${cityNameIn}.`,
     `Стоимость аренды составляет ${pricePerDayBYN} BYN в сутки.`,
     `Минимальный срок аренды — ${minDays} дн.`,
     depositBYN

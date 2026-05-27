@@ -11,6 +11,7 @@ import {
   isRegionSlug,
 } from "@/lib/cities";
 import { getSiteUrl } from "@/lib/site-url";
+import { getProductPath } from "@/lib/routes";
 
 type Props = {
   params: Promise<{ region: string; category: string }>;
@@ -247,6 +248,11 @@ export default async function RegionCategoryPage({
       ? `${categoryItem.name} в аренду`
       : `${categoryItem.name} в аренду в ${city.nameIn}`);
 
+  const categorySynonyms = (categoryItem.synonyms ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+
   const introText =
     categoryItem.introText?.trim() ||
     (region === ALL_REGION_SLUG
@@ -326,6 +332,25 @@ export default async function RegionCategoryPage({
     ],
   };
 
+  const productsItemListJsonLd =
+    products.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: `${pageTitle}: товары`,
+          itemListElement: products.map((product, index) => ({
+            "@type": "ListItem",
+            position: (safePage - 1) * PRODUCTS_PER_PAGE + index + 1,
+            url: `${SITE_URL}${getProductPath({
+              slug: product.slug,
+              category: product.category,
+              citySlug: product.citySlug,
+            })}`,
+            name: product.name,
+          })),
+        }
+      : null;
+
   function buildCategoryHref(params: { page?: number; q?: string }) {
     const query = new URLSearchParams();
 
@@ -374,6 +399,15 @@ export default async function RegionCategoryPage({
         />
       ) : null}
 
+      {productsItemListJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(productsItemListJsonLd),
+          }}
+        />
+      ) : null}
+
       <section className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 shadow-sm sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -407,6 +441,20 @@ export default async function RegionCategoryPage({
             <p className="mt-2 max-w-3xl whitespace-pre-line text-sm leading-6 text-zinc-600">
               {introText}
             </p>
+
+            {categorySynonyms.length > 0 ? (
+              <div className="mt-4 flex max-w-3xl flex-wrap items-center gap-2 text-sm">
+                <span className="text-zinc-500">Также ищут:</span>
+                {categorySynonyms.map((phrase) => (
+                  <span
+                    key={phrase}
+                    className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-zinc-700"
+                  >
+                    {phrase}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="text-sm text-zinc-500">

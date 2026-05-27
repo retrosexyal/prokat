@@ -1,9 +1,14 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
-import { getApprovedProducts, getProductBySlug } from "@/lib/products";
+import {
+  getApprovedProducts,
+  getProductBySlug,
+  getRelatedProductsWithAvailability,
+} from "@/lib/products";
 import { getCategoryBySlug } from "@/lib/categories";
 import { getCityBySlug, isRegionSlug } from "@/lib/cities";
 import { getProductPath } from "@/lib/routes";
+import { RelatedProductsSection } from "@/components/RelatedProductsSection";
 import { ProductBreadcrumbs } from "./ProductBreadcrumbs";
 import { ProductHeroSection } from "./ProductHeroSection";
 import { ProductContentSections } from "./ProductContentSections";
@@ -16,7 +21,11 @@ import {
   buildProductMetadata,
   SITE_URL,
 } from "./seo";
-import { buildProductFaq, buildSeoDescriptionParagraph } from "./utils";
+import {
+  buildProductFaq,
+  buildProductTitleMain,
+  buildSeoDescriptionParagraph,
+} from "./utils";
 import type { ProductPageProps } from "./types";
 
 export async function generateStaticParams() {
@@ -90,9 +99,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
     permanentRedirect(canonicalPath);
   }
 
-  const [categoryDoc, city] = await Promise.all([
+  const [categoryDoc, city, relatedProducts] = await Promise.all([
     getCategoryBySlug(product.category),
     Promise.resolve(getCityBySlug(product.citySlug)),
+    getRelatedProductsWithAvailability({
+      excludeProductId: product._id?.toString(),
+      category: product.category,
+      citySlug: product.citySlug,
+      limit: 3,
+    }),
   ]);
 
   if (!categoryDoc || !city) {
@@ -101,10 +116,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
   const categoryTitle = categoryDoc.h1?.trim() || categoryDoc.name;
-  const titleMain = [product.name, product.brand, product.model]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
+  const titleMain = buildProductTitleMain(product);
   const pageTitle = `${titleMain || product.name} в аренду в ${city.nameIn}`;
   const fullDescription = product.fullDescription?.trim() || "";
 
@@ -148,6 +160,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
   });
 
   const faqJsonLd = buildFaqJsonLd(faqItems);
+  const relatedProductsJsonLd =
+    relatedProducts.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: `Похожие товары: ${categoryDoc.name}`,
+          itemListElement: relatedProducts.map((item, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            url: `${SITE_URL}${getProductPath({
+              slug: item.slug,
+              category: item.category,
+              citySlug: item.citySlug,
+            })}`,
+            name: item.name,
+          })),
+        }
+      : null;
 
   return (
     <>
@@ -171,6 +201,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           __html: JSON.stringify(faqJsonLd),
         }}
       />
+
+      {relatedProductsJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(relatedProductsJsonLd),
+          }}
+        />
+      ) : null}
 
       <div className="pb-24 md:pb-0">
         <ProductBreadcrumbs
@@ -196,6 +235,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
               product={product}
               fullDescription={fullDescription}
               faqItems={faqItems}
+            />
+
+            <RelatedProductsSection
+              title={`Похожие товары в ${city.nameIn}`}
+              description={`Другие предложения из категории «${categoryDoc.name}» в этом городе, чтобы сравнить цену, срок аренды и условия получения.`}
+              products={relatedProducts}
+              moreHref={`/${product.citySlug}/${product.category}`}
+              moreLabel="Смотреть категорию"
             />
           </section>
 

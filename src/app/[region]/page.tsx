@@ -11,6 +11,7 @@ import {
   isRegionSlug,
 } from "@/lib/cities";
 import { getSiteUrl } from "@/lib/site-url";
+import { getProductPath } from "@/lib/routes";
 
 type Props = {
   params: Promise<{ region: string }>;
@@ -216,6 +217,28 @@ export default async function RegionPage({ params, searchParams }: Props) {
     })),
   };
 
+  const productsItemListJsonLd =
+    products.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name:
+            region === ALL_REGION_SLUG
+              ? "Товары в аренду по Беларуси"
+              : `Товары в аренду в ${city.nameIn}`,
+          itemListElement: products.map((product, index) => ({
+            "@type": "ListItem",
+            position: (safePage - 1) * PRODUCTS_PER_PAGE + index + 1,
+            url: `${SITE_URL}${getProductPath({
+              slug: product.slug,
+              category: product.category,
+              citySlug: product.citySlug,
+            })}`,
+            name: product.name,
+          })),
+        }
+      : null;
+
   function buildRegionHref(params: { page?: number; q?: string }) {
     const query = new URLSearchParams();
 
@@ -246,6 +269,15 @@ export default async function RegionPage({ params, searchParams }: Props) {
           __html: JSON.stringify(itemListJsonLd),
         }}
       />
+
+      {productsItemListJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(productsItemListJsonLd),
+          }}
+        />
+      ) : null}
 
       <section className="rounded-2xl border border-zinc-200 bg-white px-4 py-6 shadow-sm sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

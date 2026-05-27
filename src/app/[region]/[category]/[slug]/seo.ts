@@ -3,10 +3,21 @@ import type { CategoryDoc } from "@/types/category";
 import type { CityItem } from "@/lib/cities";
 import type { ProductDoc, ProductFaqItem } from "@/types/product";
 import { getProductPath } from "@/lib/routes";
-import { getSchemaCondition } from "./utils";
+import {
+  buildProductTitleMain,
+  getSchemaCondition,
+  isMeaningfulBrand,
+} from "./utils";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const SITE_URL = getSiteUrl();
+
+function getSeoPhrases(categoryDoc: CategoryDoc | null): string[] {
+  return (categoryDoc?.synonyms ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
 
 export function buildProductMetadata(params: {
   product: ProductDoc;
@@ -22,20 +33,21 @@ export function buildProductMetadata(params: {
   });
 
   const categoryName = categoryDoc?.name ?? "товара";
+  const seoPhrases = getSeoPhrases(categoryDoc);
   const cityNameIn = city?.nameIn ?? product.city;
-  const brandModel = [product.brand, product.model].filter(Boolean).join(" ");
-  const titleBase = brandModel ? `${product.name} ${brandModel}` : product.name;
-  const title = `${titleBase} в аренду в ${cityNameIn} | Prokatik.by`;
+  const titleBase = buildProductTitleMain(product);
+  const title = `${titleBase} в аренду и напрокат в ${cityNameIn} | Prokatik.by`;
 
   const description = [
-    `${product.name} в аренду в ${cityNameIn}.`,
-    product.brand ? `Бренд: ${product.brand}.` : null,
-    product.model ? `Модель: ${product.model}.` : null,
-    `Категория: ${categoryName}.`,
+    `${product.name} в аренду и напрокат в ${cityNameIn}.`,
     `Цена: ${product.pricePerDayBYN} BYN/сутки.`,
     `Минимальный срок: ${product.minDays} дн.`,
+    isMeaningfulBrand(product.brand) ? `Бренд: ${product.brand}.` : null,
+    product.model ? `Модель: ${product.model}.` : null,
+    `Категория: ${categoryName}.`,
     product.depositBYN ? `Залог: ${product.depositBYN} BYN.` : null,
     product.deliveryAvailable ? "Есть доставка." : null,
+    seoPhrases.length ? `Также ищут: ${seoPhrases.join(", ")}.` : null,
     product.short?.trim() || product.fullDescription?.trim() || null,
   ]
     .filter(Boolean)
@@ -155,6 +167,19 @@ export function buildProductJsonLd(params: {
       availability: "https://schema.org/InStock",
       url: canonicalUrl,
       itemCondition: getSchemaCondition(product.condition),
+      areaServed: product.city
+        ? {
+            "@type": "City",
+            name: product.city,
+          }
+        : undefined,
+      availableAtOrFrom: product.pickupAddress
+        ? {
+            "@type": "Place",
+            name: product.city,
+            address: product.pickupAddress,
+          }
+        : undefined,
       seller: product.organization
         ? {
             "@type": "Organization",
