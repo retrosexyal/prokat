@@ -55,14 +55,16 @@ export async function POST(req: Request) {
     verified: false,
     verifyToken,
     verifySentAt: now,
+    productLimit: 3,
 
     acceptedUserAgreement: true,
     acceptedPrivacyPolicy: true,
     legalDocumentsVersion: LEGAL_DOCUMENTS_VERSION,
     legalAcceptedAt: now,
-    legalAcceptedIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      ?? req.headers.get("x-real-ip")
-      ?? undefined,
+    legalAcceptedIp:
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      undefined,
   });
 
   const resend = new Resend(process.env.RESEND_API_KEY);
