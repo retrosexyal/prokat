@@ -7,6 +7,10 @@ import {
 } from "@/lib/products";
 import { getCategoryBySlug } from "@/lib/categories";
 import { getCityBySlug, isRegionSlug } from "@/lib/cities";
+import {
+  createCategorySeoTemplateContext,
+  resolveCategorySeoText,
+} from "@/lib/category-seo";
 import { getProductPath } from "@/lib/routes";
 import { RelatedProductsSection } from "@/components/RelatedProductsSection";
 import { ProductBreadcrumbs } from "./ProductBreadcrumbs";
@@ -115,7 +119,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
-  const categoryTitle = categoryDoc.h1?.trim() || categoryDoc.name;
+  const categoryTitle =
+    resolveCategorySeoText(
+      categoryDoc.h1,
+      createCategorySeoTemplateContext({
+        categoryName: categoryDoc.name,
+        city,
+        isAllRegion: false,
+      }),
+    ) || categoryDoc.name;
   const titleMain = buildProductTitleMain(product);
   const pageTitle = `${titleMain || product.name} в аренду в ${city.nameIn}`;
   const fullDescription = product.fullDescription?.trim() || "";

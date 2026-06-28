@@ -4,6 +4,10 @@ import type { CityItem } from "@/lib/cities";
 import type { ProductDoc, ProductFaqItem } from "@/types/product";
 import { getProductPath } from "@/lib/routes";
 import {
+  createCategorySeoTemplateContext,
+  resolveCategorySeoArray,
+} from "@/lib/category-seo";
+import {
   buildProductTitleMain,
   getSchemaCondition,
   isMeaningfulBrand,
@@ -12,11 +16,29 @@ import { getSiteUrl } from "@/lib/site-url";
 
 export const SITE_URL = getSiteUrl();
 
-function getSeoPhrases(categoryDoc: CategoryDoc | null): string[] {
-  return (categoryDoc?.synonyms ?? [])
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 4);
+function getSeoPhrases(
+  categoryDoc: CategoryDoc | null,
+  city: CityItem | undefined,
+): string[] {
+  if (!categoryDoc) {
+    return [];
+  }
+
+  if (!city) {
+    return (categoryDoc.synonyms ?? [])
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+  }
+
+  return resolveCategorySeoArray(
+    categoryDoc.synonyms,
+    createCategorySeoTemplateContext({
+      categoryName: categoryDoc.name,
+      city,
+      isAllRegion: false,
+    }),
+  ).slice(0, 4);
 }
 
 export function buildProductMetadata(params: {
@@ -33,7 +55,7 @@ export function buildProductMetadata(params: {
   });
 
   const categoryName = categoryDoc?.name ?? "товара";
-  const seoPhrases = getSeoPhrases(categoryDoc);
+  const seoPhrases = getSeoPhrases(categoryDoc, city);
   const cityNameIn = city?.nameIn ?? product.city;
   const titleBase = buildProductTitleMain(product);
   const title = `${titleBase} в аренду и напрокат в ${cityNameIn} | Prokatik.by`;

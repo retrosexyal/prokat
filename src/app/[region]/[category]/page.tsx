@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import type { CategoryDoc } from "@/types/category";
 import { ProductCard } from "@/components/ProductCard";
 import { getApprovedProductsWithAvailability } from "@/lib/products";
 import { getAllCategories } from "@/lib/categories";
+import {
+  createCategorySeoTemplateContext,
+  resolveCategorySeoArray,
+  resolveCategorySeoFaq,
+  resolveCategorySeoText,
+} from "@/lib/category-seo";
 import {
   ALL_REGION_SLUG,
   getCityBySlug,
@@ -82,6 +89,11 @@ export async function generateMetadata({
   }
 
   const isAll = region === ALL_REGION_SLUG;
+  const seoContext = createCategorySeoTemplateContext({
+    categoryName: categoryItem.name,
+    city,
+    isAllRegion: isAll,
+  });
   const currentPage = Math.max(
     Number(resolvedSearchParams?.page ?? "1") || 1,
     1,
@@ -104,9 +116,11 @@ export async function generateMetadata({
     ? `${categoryItem.name} в аренду по Беларуси: предложения, цены, условия бронирования и размещения.`
     : `${categoryItem.name} в аренду в ${city.nameIn}: предложения, цены, условия бронирования и размещения на Prokatik.by.`;
 
-  const title = categoryItem.seoTitle?.trim() || fallbackTitle;
+  const title =
+    resolveCategorySeoText(categoryItem.seoTitle, seoContext) || fallbackTitle;
   const description =
-    categoryItem.seoDescription?.trim() || fallbackDescription;
+    resolveCategorySeoText(categoryItem.seoDescription, seoContext) ||
+    fallbackDescription;
 
   const shouldNoindex =
     categoryItem.indexingMode === "noindex" || search.length > 0;
@@ -169,6 +183,20 @@ export default async function RegionCategoryPage({
   if (!city) {
     notFound();
   }
+
+  const isAll = region === ALL_REGION_SLUG;
+  const getCategorySeoContext = (item: CategoryDoc) =>
+    createCategorySeoTemplateContext({
+      categoryName: item.name,
+      city,
+      isAllRegion: isAll,
+    });
+  const getCategoryTitle = (item: CategoryDoc) =>
+    resolveCategorySeoText(item.h1, getCategorySeoContext(item)) || item.name;
+  const getCategoryIntro = (item: CategoryDoc, fallback: string) =>
+    resolveCategorySeoText(item.introText, getCategorySeoContext(item)) ||
+    fallback;
+  const seoContext = getCategorySeoContext(categoryItem);
 
   const childCategories = activeCategories
     .filter(
@@ -243,28 +271,26 @@ export default async function RegionCategoryPage({
   const { products, totalProducts, totalPages, currentPage: safePage } = result;
 
   const pageTitle =
-    categoryItem.h1?.trim() ||
-    (region === ALL_REGION_SLUG
+    resolveCategorySeoText(categoryItem.h1, seoContext) ||
+    (isAll
       ? `${categoryItem.name} в аренду`
       : `${categoryItem.name} в аренду в ${city.nameIn}`);
 
-  const categorySynonyms = (categoryItem.synonyms ?? [])
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 6);
+  const categorySynonyms = resolveCategorySeoArray(
+    categoryItem.synonyms,
+    seoContext,
+  ).slice(0, 6);
 
   const introText =
-    categoryItem.introText?.trim() ||
-    (region === ALL_REGION_SLUG
+    resolveCategorySeoText(categoryItem.introText, seoContext) ||
+    (isAll
       ? `На этой странице собраны предложения по аренде в категории "${categoryItem.name}" по Беларуси.`
       : `На этой странице собраны предложения по аренде в категории "${categoryItem.name}" в ${city.nameIn}.`);
 
-  const faqItems = (categoryItem.faq ?? []).filter(
-    (item) => item.q.trim() && item.a.trim(),
-  );
+  const faqItems = resolveCategorySeoFaq(categoryItem.faq, seoContext);
 
   const canonicalPath =
-    region === ALL_REGION_SLUG ? `/all/${category}` : `/${region}/${category}`;
+    isAll ? `/all/${category}` : `/${region}/${category}`;
 
   const breadcrumbItems = [
     {
@@ -276,13 +302,13 @@ export default async function RegionCategoryPage({
     {
       "@type": "ListItem",
       position: 2,
-      name: region === ALL_REGION_SLUG ? "Все товары" : city.name,
+      name: isAll ? "Все товары" : city.name,
       item: `${SITE_URL}/${region}`,
     },
     {
       "@type": "ListItem",
       position: 3,
-      name: categoryItem.h1?.trim() || categoryItem.name,
+      name: pageTitle,
       item: `${SITE_URL}${canonicalPath}`,
     },
   ];
@@ -312,22 +338,21 @@ export default async function RegionCategoryPage({
   const relatedCategoriesJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name:
-      region === ALL_REGION_SLUG
-        ? `Другие категории рядом с ${categoryItem.name}`
-        : `Другие категории аренды в ${city.nameIn}`,
+    name: isAll
+      ? `Другие категории рядом с ${categoryItem.name}`
+      : `Другие категории аренды в ${city.nameIn}`,
     itemListElement: [
       ...otherRootCategories.map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
         url: `${SITE_URL}/${region}/${item.slug}`,
-        name: item.h1?.trim() || item.name,
+        name: getCategoryTitle(item),
       })),
       ...siblingCategories.map((item, index) => ({
         "@type": "ListItem",
         position: otherRootCategories.length + index + 1,
         url: `${SITE_URL}/${region}/${item.slug}`,
-        name: item.h1?.trim() || item.name,
+        name: getCategoryTitle(item),
       })),
     ],
   };
@@ -417,11 +442,11 @@ export default async function RegionCategoryPage({
               </Link>
               <span>/</span>
               <Link href={`/${region}`} className="hover:text-zinc-900">
-                {region === ALL_REGION_SLUG ? "Все товары" : city.name}
+                {isAll ? "Все товары" : city.name}
               </Link>
               <span>/</span>
               <span className="text-zinc-900">
-                {categoryItem.h1?.trim() || categoryItem.name}
+                {pageTitle}
               </span>
             </nav>
 
@@ -473,7 +498,7 @@ export default async function RegionCategoryPage({
           ) : (
             <p className="mt-1 text-sm text-zinc-500">
               Актуальные предложения в категории{" "}
-              {categoryItem.h1?.trim() || categoryItem.name}.
+              {pageTitle}.
             </p>
           )}
         </div>
@@ -571,11 +596,13 @@ export default async function RegionCategoryPage({
                 className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 transition hover:border-zinc-300 hover:bg-white"
               >
                 <div className="text-lg font-semibold text-zinc-900">
-                  {child.h1?.trim() || child.name}
+                  {getCategoryTitle(child)}
                 </div>
                 <div className="mt-2 text-sm leading-6 text-zinc-600">
-                  {child.introText?.trim() ||
-                    `Перейти в подкатегорию "${child.name}"`}
+                  {getCategoryIntro(
+                    child,
+                    `Перейти в подкатегорию "${child.name}"`,
+                  )}
                 </div>
               </Link>
             ))}
@@ -603,7 +630,7 @@ export default async function RegionCategoryPage({
                 href={`/${region}/${item.slug}`}
                 className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-white"
               >
-                {item.h1?.trim() || item.name}
+                {getCategoryTitle(item)}
               </Link>
             ))}
           </div>
@@ -631,11 +658,13 @@ export default async function RegionCategoryPage({
                 className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 transition hover:border-zinc-300 hover:bg-white"
               >
                 <div className="text-base font-semibold text-zinc-900">
-                  {item.h1?.trim() || item.name}
+                  {getCategoryTitle(item)}
                 </div>
                 <div className="mt-2 text-sm leading-6 text-zinc-600">
-                  {item.introText?.trim() ||
-                    `Перейти в категорию "${item.name}" и посмотреть предложения по аренде.`}
+                  {getCategoryIntro(
+                    item,
+                    `Перейти в категорию "${item.name}" и посмотреть предложения по аренде.`,
+                  )}
                 </div>
               </Link>
             ))}
