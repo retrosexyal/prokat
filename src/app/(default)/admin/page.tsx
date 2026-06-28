@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
 import { isAdminEmail } from "@/lib/auth";
 import {
@@ -15,6 +16,14 @@ import { toContactMessageViews } from "@/lib/contact-message-mappers";
 import { AdminTabs } from "./AdminTabs";
 import { getAllCategories } from "@/lib/categories";
 import { toCategoryViews } from "@/lib/category-mappers";
+
+export const metadata: Metadata = {
+  title: "Админ-панель",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);

@@ -33,7 +33,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const regionPages: MetadataRoute.Sitemap = [
-    { url: `${base}/all`, lastModified: now },
     ...regionCities.map((city) => ({
       url: `${base}/${city.slug}`,
       lastModified: now,

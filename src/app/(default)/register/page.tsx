@@ -1,5 +1,14 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import RegisterForm from "./RegisterForm";
+
+export const metadata: Metadata = {
+  title: "Регистрация",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default function RegisterPage() {
   return (

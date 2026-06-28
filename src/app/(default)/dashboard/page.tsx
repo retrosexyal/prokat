@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import type { Metadata } from "next";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import { getProductsByOwner } from "@/lib/products";
@@ -17,6 +18,14 @@ import { toMonetizationRequestViews } from "@/lib/monetization-mappers";
 import type { MonetizationRequestView } from "@/types/monetization";
 
 const FREE_PRODUCTS_LIMIT = 3;
+
+export const metadata: Metadata = {
+  title: "Личный кабинет",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
