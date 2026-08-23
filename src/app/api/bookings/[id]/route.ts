@@ -6,6 +6,8 @@ import clientPromise from "@/lib/mongodb";
 import type { BookingDoc } from "@/types/booking";
 import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
+import { toBookingView } from "@/lib/booking-mappers";
+import { getPeakReservedQuantity } from "@/lib/booking-capacity";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -103,17 +105,31 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
     }
 
-    const conflicts = await db.collection<BookingDoc>("bookings").countDocuments(
-      {
+    const conflicts = await db
+      .collection<BookingDoc>("bookings")
+      .find({
         _id: { $ne: booking._id },
         productId: booking.productId,
         status: "confirmed",
         startDate: { $lte: booking.endDate },
         endDate: { $gte: booking.startDate },
-      },
+      })
+      .project<Pick<BookingDoc, "startDate" | "endDate" | "quantity">>({
+        startDate: 1,
+        endDate: 1,
+        quantity: 1,
+      })
+      .toArray();
+    const reservedQuantity = getPeakReservedQuantity(
+      conflicts,
+      booking.startDate,
+      booking.endDate,
     );
 
-    if (conflicts >= (product.quantity ?? 1)) {
+    if (
+      reservedQuantity + (booking.quantity ?? 1) >
+      (product.quantity ?? 1)
+    ) {
       return NextResponse.json(
         {
           error:
@@ -140,7 +156,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     _id: booking._id,
   });
 
-  return NextResponse.json(updatedBooking);
+  return NextResponse.json(updatedBooking ? toBookingView(updatedBooking) : null);
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {

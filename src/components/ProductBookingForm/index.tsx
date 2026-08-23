@@ -24,6 +24,7 @@ type BusyRange = {
   startDate: string;
   endDate: string;
   status: "pending" | "confirmed" | "cancelled";
+  quantity: number;
 };
 
 type Props = {
@@ -66,13 +67,27 @@ function addDays(dateString: string, days: number): string {
   return toInputDate(date);
 }
 
-function rangesOverlap(
-  startA: string,
-  endA: string,
-  startB: string,
-  endB: string,
-): boolean {
-  return startA <= endB && endA >= startB;
+function getPeakReservedQuantity(
+  ranges: BusyRange[],
+  startDate: string,
+  endDate: string,
+): number {
+  let peak = 0;
+  const cursor = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
+
+  while (cursor <= end) {
+    const day = toInputDate(cursor);
+    const reserved = ranges.reduce((total, range) => {
+      const rangeStart = range.startDate.slice(0, 10);
+      const rangeEnd = range.endDate.slice(0, 10);
+      return total + (day >= rangeStart && day <= rangeEnd ? range.quantity : 0);
+    }, 0);
+    peak = Math.max(peak, reserved);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return peak;
 }
 
 function startOfToday(): Date {
@@ -242,6 +257,7 @@ export function ProductBookingForm({
 }: Props) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [busyRanges, setBusyRanges] = useState<BusyRange[]>([]);
@@ -294,6 +310,10 @@ export function ProductBookingForm({
     };
   }, [productId, totalQuantity]);
 
+  useEffect(() => {
+    setQuantity((current) => Math.min(Math.max(current, 1), resolvedQuantity));
+  }, [resolvedQuantity]);
+
   const activeBusyRanges = useMemo(
     () => busyRanges.filter((range) => range.status !== "cancelled"),
     [busyRanges],
@@ -308,7 +328,10 @@ export function ProductBookingForm({
 
       while (cursor <= end) {
         const key = toInputDate(cursor);
-        dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1);
+        dailyCounts.set(
+          key,
+          (dailyCounts.get(key) ?? 0) + range.quantity,
+        );
         cursor.setDate(cursor.getDate() + 1);
       }
     }
@@ -356,19 +379,16 @@ export function ProductBookingForm({
   const conflictText = useMemo(() => {
     if (!startDate || !endDate) return "";
 
-    const overlappingCount = activeBusyRanges.filter((range) =>
-      rangesOverlap(
-        startDate,
-        endDate,
-        range.startDate.slice(0, 10),
-        range.endDate.slice(0, 10),
-      ),
-    ).length;
+    const reservedQuantity = getPeakReservedQuantity(
+      activeBusyRanges,
+      startDate,
+      endDate,
+    );
 
-    return overlappingCount >= resolvedQuantity
+    return reservedQuantity + quantity > resolvedQuantity
       ? "На выбранные даты свободного количества товара уже нет"
       : "";
-  }, [activeBusyRanges, endDate, resolvedQuantity, startDate]);
+  }, [activeBusyRanges, endDate, quantity, resolvedQuantity, startDate]);
 
   function applyCalendarRange(range: DateRange | undefined): void {
     setError("");
@@ -434,16 +454,13 @@ export function ProductBookingForm({
       return;
     }
 
-    const overlappingCount = activeBusyRanges.filter((range) =>
-      rangesOverlap(
-        startDate,
-        endDate,
-        range.startDate.slice(0, 10),
-        range.endDate.slice(0, 10),
-      ),
-    ).length;
+    const reservedQuantity = getPeakReservedQuantity(
+      activeBusyRanges,
+      startDate,
+      endDate,
+    );
 
-    if (overlappingCount >= resolvedQuantity) {
+    if (reservedQuantity + quantity > resolvedQuantity) {
       setError("На выбранные даты свободного количества товара уже нет");
       setLoading(false);
       return;
@@ -464,6 +481,7 @@ export function ProductBookingForm({
           productId,
           phone,
           message,
+          quantity,
           startDate,
           endDate,
           acceptedPrivacyPolicy: acceptedLegal,
@@ -478,6 +496,7 @@ export function ProductBookingForm({
       setSuccess("Бронирование отправлено. С вами свяжутся.");
       setPhone("");
       setMessage("");
+      setQuantity(1);
       setStartDate("");
       setEndDate("");
 
@@ -531,6 +550,7 @@ export function ProductBookingForm({
       const draft = JSON.parse(raw) as {
         phone?: string;
         message?: string;
+        quantity?: number;
         startDate?: string;
         endDate?: string;
       };
@@ -541,6 +561,10 @@ export function ProductBookingForm({
 
       if (draft.message) {
         setMessage(draft.message);
+      }
+
+      if (Number.isInteger(draft.quantity) && Number(draft.quantity) > 0) {
+        setQuantity(Number(draft.quantity));
       }
 
       if (draft.startDate) {
@@ -565,7 +589,9 @@ export function ProductBookingForm({
       return;
     }
 
-    const hasDraft = Boolean(phone || message || startDate || endDate);
+    const hasDraft = Boolean(
+      phone || message || quantity !== 1 || startDate || endDate,
+    );
 
     if (!hasDraft) {
       localStorage.removeItem(bookingDraftStorageKey);
@@ -577,6 +603,7 @@ export function ProductBookingForm({
       JSON.stringify({
         phone,
         message,
+        quantity,
         startDate,
         endDate,
       }),
@@ -587,6 +614,7 @@ export function ProductBookingForm({
     hydratedDraftKey,
     message,
     phone,
+    quantity,
     startDate,
   ]);
 
@@ -687,12 +715,22 @@ export function ProductBookingForm({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border-subtle bg-white p-3 sm:p-4">
-            <div className="text-sm font-medium text-zinc-900">
-              Количество в наличии
-            </div>
-            <p className="mt-1 text-sm text-zinc-600">
-              Всего доступно для параллельной аренды: {resolvedQuantity}
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-700">
+              Количество товаров
+            </label>
+            <input
+              type="number"
+              required
+              min={1}
+              max={resolvedQuantity}
+              step={1}
+              value={quantity}
+              onChange={(event) => setQuantity(Number(event.target.value))}
+              className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Всего в наличии: {resolvedQuantity}
             </p>
           </div>
 

@@ -9,6 +9,9 @@ import type { UserType } from "@/types";
 import type { ProductDoc } from "@/types/product";
 import type { BookingDoc } from "@/types/booking";
 import { notifyUser } from "@/lib/user-notifications";
+import { getProductPath } from "@/lib/routes";
+import { getSiteUrl } from "@/lib/site-url";
+import { getPeakReservedQuantity } from "@/lib/booking-capacity";
 import {
   createGuestBookingAccessToken,
   hashGuestBookingAccessToken,
@@ -78,6 +81,7 @@ export async function GET(request: Request) {
       startDate: booking.startDate.toISOString(),
       endDate: booking.endDate.toISOString(),
       status: booking.status,
+      quantity: booking.quantity ?? 1,
     })),
   });
 }
@@ -89,6 +93,7 @@ export async function POST(request: Request) {
     productId?: string;
     phone?: string;
     message?: string;
+    quantity?: number;
     startDate?: string;
     endDate?: string;
     acceptedPrivacyPolicy?: boolean;
@@ -97,6 +102,7 @@ export async function POST(request: Request) {
   const productId = String(body.productId ?? "").trim();
   const phone = String(body.phone ?? "").trim();
   const message = String(body.message ?? "").trim();
+  const quantity = Number(body.quantity ?? 1);
   const startDateRaw = String(body.startDate ?? "").trim();
   const endDateRaw = String(body.endDate ?? "").trim();
   const acceptedPrivacyPolicy = body.acceptedPrivacyPolicy === true;
@@ -114,6 +120,20 @@ export async function POST(request: Request) {
   if (!productId || !phone || !startDateRaw || !endDateRaw) {
     return NextResponse.json(
       { error: "Заполните обязательные поля" },
+      { status: 400 },
+    );
+  }
+
+  if (!ObjectId.isValid(productId)) {
+    return NextResponse.json(
+      { error: "Некорректный productId" },
+      { status: 400 },
+    );
+  }
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return NextResponse.json(
+      { error: "Количество товаров должно быть целым числом не меньше 1" },
       { status: 400 },
     );
   }
@@ -145,6 +165,15 @@ export async function POST(request: Request) {
 
   if (!product?._id || !product.ownerId) {
     return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+  }
+
+  const totalQuantity = product.quantity ?? 1;
+
+  if (quantity > totalQuantity) {
+    return NextResponse.json(
+      { error: `Доступно товаров: ${totalQuantity}` },
+      { status: 400 },
+    );
   }
 
   const msPerDay = 1000 * 60 * 60 * 24;
@@ -196,14 +225,27 @@ export async function POST(request: Request) {
     }
   }
 
-  const conflicts = await db.collection<BookingDoc>("bookings").countDocuments({
-    productId: product._id,
-    status: "confirmed",
-    startDate: { $lte: endDate },
-    endDate: { $gte: startDate },
-  });
+  const conflicts = await db
+    .collection<BookingDoc>("bookings")
+    .find({
+      productId: product._id,
+      status: "confirmed",
+      startDate: { $lte: endDate },
+      endDate: { $gte: startDate },
+    })
+    .project<Pick<BookingDoc, "startDate" | "endDate" | "quantity">>({
+      startDate: 1,
+      endDate: 1,
+      quantity: 1,
+    })
+    .toArray();
+  const reservedQuantity = getPeakReservedQuantity(
+    conflicts,
+    startDate,
+    endDate,
+  );
 
-  if (conflicts >= (product.quantity ?? 1)) {
+  if (reservedQuantity + quantity > totalQuantity) {
     return NextResponse.json(
       { error: "На выбранные даты свободного количества товара уже нет" },
       { status: 409 },
@@ -277,6 +319,7 @@ export async function POST(request: Request) {
     guestAccessTokenCreatedAt: guestAccessToken ? new Date() : undefined,
     phone,
     message: message || undefined,
+    quantity,
     startDate,
     endDate,
     status: "pending",
@@ -290,12 +333,26 @@ export async function POST(request: Request) {
       .collection<UserType>("users")
       .findOne({ _id: product.ownerId } as unknown as Filter<UserType>);
 
-    const senderLabel = renterEmail ? renterEmail : `Гость · ${phone}`;
+    const productPath = getProductPath({
+      citySlug: product.citySlug,
+      category: product.category,
+      slug: product.slug,
+    });
+    const productUrl = `${getSiteUrl()}${productPath}`;
+    const notificationLines = [
+      `Товар: ${product.name}`,
+      `Телефон: ${phone}`,
+      `Ссылка: ${productUrl}`,
+      `Количество товаров: ${quantity}`,
+      `Количество дней: ${diffDays}`,
+      `Даты: ${formatDate(startDate)} — ${formatDate(endDate)}`,
+      message ? `Сообщение: ${message}` : "",
+    ].filter(Boolean);
 
     await notifyUser(db, owner, {
       title: "Новое бронирование",
-      body: `${product.name}: ${formatDate(startDate)} — ${formatDate(endDate)}. ${senderLabel}`,
-      url: "/dashboard",
+      body: notificationLines.join("\n"),
+      url: productPath,
       icon: "/favicon-192x192.png",
       badge: "/favicon-192x192.png",
     });

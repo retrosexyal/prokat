@@ -2,6 +2,15 @@
 
 import { Button } from "@/components/ui/Button";
 import type { BookingView } from "@/types/booking";
+import Link from "next/link";
+import { getProductPath } from "@/lib/routes";
+
+function getBookingDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
 
 type Props = {
   bookings: BookingView[];
@@ -29,6 +38,13 @@ export function BookingsSection({
         <div className="space-y-3">
           {bookings.map((booking) => {
             const isDeleting = deletingBookingId === booking._id;
+            const productPath = booking.product
+              ? getProductPath({
+                  citySlug: booking.product.citySlug,
+                  category: booking.product.category,
+                  slug: booking.product.slug,
+                })
+              : null;
 
             return (
               <div
@@ -37,23 +53,40 @@ export function BookingsSection({
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1">
-                    <div className="text-base font-semibold text-zinc-900">
-                      {booking.product?.name ?? "Товар"}
-                    </div>
+                    {productPath ? (
+                      <Link
+                        href={productPath}
+                        className="block text-base font-semibold text-zinc-900 hover:underline"
+                      >
+                        {booking.product?.name ?? "Товар"}
+                      </Link>
+                    ) : (
+                      <div className="text-base font-semibold text-zinc-900">
+                        {booking.product?.name ?? "Товар"}
+                      </div>
+                    )}
 
                     <div className="text-sm text-zinc-600">
                       Телефон: {booking.phone}
                     </div>
 
-                    <div className="text-sm text-zinc-600">
-                      Контакт: {booking.renterEmail ?? "Гость без регистрации"}
-                    </div>
-
-                    {booking.guestIpAddress ? (
+                    {productPath ? (
                       <div className="text-sm text-zinc-600">
-                        IP: {booking.guestIpAddress}
+                        Ссылка на товар:{" "}
+                        <Link href={productPath} className="hover:underline">
+                          открыть товар
+                        </Link>
                       </div>
                     ) : null}
+
+                    <div className="text-sm text-zinc-600">
+                      Количество товаров: {booking.quantity}
+                    </div>
+
+                    <div className="text-sm text-zinc-600">
+                      Количество дней:{" "}
+                      {getBookingDays(booking.startDate, booking.endDate)}
+                    </div>
 
                     <div className="text-sm text-zinc-600">
                       Даты: {booking.startDate.slice(0, 10)} —{" "}

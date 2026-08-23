@@ -58,7 +58,15 @@ function buildAvailabilityStages(startOfDay: Date, endOfDay: Date) {
             {
               $subtract: [
                 { $ifNull: ["$quantity", 1] },
-                { $size: "$activeBookingsToday" },
+                {
+                  $sum: {
+                    $map: {
+                      input: "$activeBookingsToday",
+                      as: "booking",
+                      in: { $ifNull: ["$$booking.quantity", 1] },
+                    },
+                  },
+                },
               ],
             },
           ],

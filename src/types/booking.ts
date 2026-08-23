@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { CitySlug } from "@/lib/cities";
 
 export type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -19,6 +20,7 @@ export type BookingDoc = {
   guestAccessTokenCreatedAt?: Date;
   phone: string;
   message?: string;
+  quantity?: number;
   startDate: Date;
   endDate: Date;
   status: BookingStatus;
@@ -36,10 +38,9 @@ export type BookingView = {
   productId: string;
   productOwnerId: string;
   renterId?: string;
-  renterEmail?: string;
-  guestIpAddress?: string;
   phone: string;
   message?: string;
+  quantity: number;
   startDate: string;
   endDate: string;
   status: BookingStatus;
@@ -53,6 +54,6 @@ export type BookingView = {
     images: string[];
     pricePerDayBYN: number;
     city: string;
-    citySlug: string;
+    citySlug: CitySlug;
   };
 };
