@@ -6,6 +6,8 @@ import axios from "axios";
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/routes";
 import type { ProductView, ProductStatus } from "@/types/product";
+import type { BoostDuration } from "@/types/monetization";
+import { BOOST_FIXED_VALUE, getBoostDurationLabel } from "@/lib/boost-pricing";
 
 type Props = {
   initialProducts: ProductView[];
@@ -39,6 +41,8 @@ export function AdminProductsPanel({ initialProducts }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [boostDurations, setBoostDurations] = useState<Record<string, BoostDuration>>({});
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -72,6 +76,7 @@ export function AdminProductsPanel({ initialProducts }: Props) {
 
   async function deleteProduct(id: string): Promise<void> {
     setError("");
+    setMessage("");
     setLoadingId(id);
 
     try {
@@ -87,13 +92,38 @@ export function AdminProductsPanel({ initialProducts }: Props) {
     }
   }
 
+  async function changeBoost(product: ProductView, boostAction: "apply" | "remove"): Promise<void> {
+    const id = product._id ?? "";
+    setError("");
+    setMessage("");
+    setLoadingId(id);
+
+    try {
+      const response = await api.patch<ProductView>(API_ROUTES.adminProductById(id), {
+        boostAction,
+        boostDuration: boostAction === "apply" ? boostDurations[id] ?? "week" : undefined,
+      });
+      setProducts((prev) => prev.map((item) => (item._id === id ? response.data : item)));
+      setMessage(
+        boostAction === "apply"
+          ? `Буст для «${product.name}» применён`
+          : `Буст для «${product.name}» снят`,
+      );
+      router.refresh();
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "Не удалось изменить буст"));
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   return (
     <section className="rounded-xl border border-border-subtle bg-white p-4 sm:p-6">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-xl sm:text-2xl font-semibold">Все товары</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Здесь можно найти любой товар и удалить его из базы.
+            Здесь можно найти любой товар, вручную управлять его бустом или удалить его.
           </p>
         </div>
 
@@ -105,6 +135,12 @@ export function AdminProductsPanel({ initialProducts }: Props) {
       {error ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
+        </div>
+      ) : null}
+
+      {message ? (
+        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {message}
         </div>
       ) : null}
 
@@ -233,6 +269,72 @@ export function AdminProductsPanel({ initialProducts }: Props) {
                     <div className="rounded-md bg-zinc-50 px-3 py-2">
                       {product.short?.trim() || "Описание не заполнено"}
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                    <div className="mb-2 text-sm font-medium">Ручное управление бустом</div>
+                    {typeof product.boostRestoreValue === "number" ? (
+                      <div className="space-y-2">
+                        <div className="text-sm text-zinc-700">
+                          Активен: +{BOOST_FIXED_VALUE}
+                          {product.boostDuration ? ` · ${getBoostDurationLabel(product.boostDuration)}` : ""}
+                          {product.boostExpiresAt
+                            ? ` · до ${new Date(product.boostExpiresAt).toLocaleString("ru-RU")}`
+                            : ""}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <select
+                            value={boostDurations[id] ?? product.boostDuration ?? "week"}
+                            onChange={(event) =>
+                              setBoostDurations((prev) => ({ ...prev, [id]: event.target.value as BoostDuration }))
+                            }
+                            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="week">Неделя</option>
+                            <option value="month">Месяц</option>
+                            <option value="year">Год</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => changeBoost(product, "apply")}
+                            className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-60"
+                          >
+                            {isLoading ? "Сохраняем..." : "Изменить срок"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => changeBoost(product, "remove")}
+                            className="rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-60"
+                          >
+                            {isLoading ? "Снимаем..." : "Снять буст"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <select
+                          value={boostDurations[id] ?? "week"}
+                          onChange={(event) =>
+                            setBoostDurations((prev) => ({ ...prev, [id]: event.target.value as BoostDuration }))
+                          }
+                          className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="week">Неделя</option>
+                          <option value="month">Месяц</option>
+                          <option value="year">Год</option>
+                        </select>
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => changeBoost(product, "apply")}
+                          className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                        >
+                          {isLoading ? "Применяем..." : `Добавить буст +${BOOST_FIXED_VALUE}`}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2">

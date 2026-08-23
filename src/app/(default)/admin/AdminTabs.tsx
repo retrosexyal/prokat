@@ -11,6 +11,8 @@ import type { ProductView } from "@/types/product";
 import type { MonetizationRequestView } from "@/types/monetization";
 import type { CategoryView } from "@/types/category";
 import type { ContactMessageView } from "@/types/contact-message";
+import type { AdminUserView } from "@/types/admin";
+import { AdminUsersPanel } from "./AdminUsersPanel";
 
 type AdminTabKey =
   | "categories"
@@ -18,6 +20,7 @@ type AdminTabKey =
   | "monetization"
   | "expiredBoosts"
   | "products"
+  | "users"
   | "messages";
 
 const TABS: Array<{ key: AdminTabKey; label: string }> = [
@@ -26,6 +29,7 @@ const TABS: Array<{ key: AdminTabKey; label: string }> = [
   { key: "monetization", label: "Монетизация" },
   { key: "expiredBoosts", label: "Истёкшие бусты" },
   { key: "products", label: "Товары" },
+  { key: "users", label: "Пользователи" },
   { key: "messages", label: "Сообщения" },
 ];
 
@@ -36,6 +40,7 @@ type Props = {
   expiredBoostRequests: MonetizationRequestView[];
   categories: CategoryView[];
   contactMessages: ContactMessageView[];
+  users: AdminUserView[];
 };
 
 export function AdminTabs({
@@ -45,6 +50,7 @@ export function AdminTabs({
   expiredBoostRequests,
   categories,
   contactMessages,
+  users,
 }: Props) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>("moderation");
 
@@ -99,6 +105,8 @@ export function AdminTabs({
       {activeTab === "products" ? (
         <AdminProductsPanel initialProducts={allProducts} />
       ) : null}
+
+      {activeTab === "users" ? <AdminUsersPanel initialUsers={users} /> : null}
 
       {activeTab === "messages" ? (
         <AdminContactMessages initialMessages={contactMessages} />

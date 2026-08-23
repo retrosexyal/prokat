@@ -16,6 +16,7 @@ import { toContactMessageViews } from "@/lib/contact-message-mappers";
 import { AdminTabs } from "./AdminTabs";
 import { getAllCategories } from "@/lib/categories";
 import { toCategoryViews } from "@/lib/category-mappers";
+import { getAllUsersForAdmin } from "@/lib/admin-users";
 
 export const metadata: Metadata = {
   title: "Админ-панель",
@@ -39,6 +40,7 @@ export default async function AdminPage() {
     expiredBoostedProducts,
     categories,
     contactMessages,
+    users,
   ] = await Promise.all([
     getPendingProducts(),
     getAllProductsForAdmin(),
@@ -46,6 +48,7 @@ export default async function AdminPage() {
     getExpiredBoostedProducts(),
     getAllCategories(),
     getContactMessagesForAdmin(),
+    getAllUsersForAdmin(),
   ]);
 
   const expiredBoostRequests = requests.filter((request) => {
@@ -64,6 +67,7 @@ export default async function AdminPage() {
       expiredBoostRequests={toMonetizationRequestViews(expiredBoostRequests)}
       categories={toCategoryViews(categories)}
       contactMessages={toContactMessageViews(contactMessages)}
+      users={users}
     />
   );
 }

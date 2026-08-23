@@ -5,6 +5,7 @@ export const API_ROUTES = {
   productById: (id: string) => `/api/products/${id}`,
   adminProducts: "/api/admin/products",
   adminProductById: (id: string) => `/api/admin/products/${id}`,
+  adminUserById: (id: string) => `/api/admin/users/${id}`,
   adminImages: "/api/admin/images",
   adminImageDelete: (publicId: string) =>
     `/api/admin/images?publicId=${encodeURIComponent(publicId)}`,

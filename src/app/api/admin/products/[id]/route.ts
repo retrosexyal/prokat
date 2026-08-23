@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { ObjectId } from "mongodb";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { updateProduct } from "@/lib/products";
 import { cloudinary } from "@/lib/cloudinary";
 import clientPromise from "@/lib/mongodb";
 import type { ProductDoc } from "@/types/product";
+import type { BoostDuration } from "@/types/monetization";
+import {
+  BOOST_FIXED_VALUE,
+  calculateBoostExpiration,
+} from "@/lib/boost-pricing";
+import { toProductView } from "@/lib/product-mappers";
 
 function isAdminEmail(email: string | null | undefined) {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -34,6 +39,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const body = await request.json();
+
+  const boostAction = body?.boostAction as "apply" | "remove" | undefined;
+  const boostDuration = body?.boostDuration as BoostDuration | undefined;
+  const allowedBoostDurations: BoostDuration[] = ["week", "month", "year"];
 
   const status = body?.status as ProductDoc["status"] | undefined;
   const selectedCategory = String(body?.category ?? "").trim();
@@ -64,6 +73,81 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const client = await clientPromise;
   const db = client.db();
+
+  if (boostAction) {
+    if (!(["apply", "remove"] as const).includes(boostAction)) {
+      return NextResponse.json(
+        { error: "Некорректное действие с бустом" },
+        { status: 400 },
+      );
+    }
+
+    if (
+      boostAction === "apply" &&
+      (!boostDuration || !allowedBoostDurations.includes(boostDuration))
+    ) {
+      return NextResponse.json(
+        { error: "Выберите корректный срок буста" },
+        { status: 400 },
+      );
+    }
+
+    const productId = new ObjectId(id);
+    const product = await db.collection<ProductDoc>("products").findOne({ _id: productId });
+    if (!product) {
+      return NextResponse.json({ error: "Товар не найден" }, { status: 404 });
+    }
+
+    if (boostAction === "remove") {
+      if (typeof product.boostRestoreValue !== "number") {
+        return NextResponse.json({ error: "У товара нет активного буста" }, { status: 400 });
+      }
+
+      const updated = await db.collection<ProductDoc>("products").findOneAndUpdate(
+        { _id: productId },
+        {
+          $set: {
+            ratingBoost: product.boostRestoreValue,
+            priorityScore: product.boostRestoreValue,
+            updatedAt: new Date(),
+          },
+          $unset: {
+            boostRestoreValue: "",
+            boostAppliedAt: "",
+            boostExpiresAt: "",
+            boostDuration: "",
+          },
+        },
+        { returnDocument: "after" },
+      );
+
+      return NextResponse.json(updated ? toProductView(updated) : null);
+    }
+
+    const appliedAt = new Date();
+    const restoreValue =
+      typeof product.boostRestoreValue === "number"
+        ? product.boostRestoreValue
+        : Number(product.ratingBoost ?? 0);
+    const boostedRating = restoreValue + BOOST_FIXED_VALUE;
+    const updated = await db.collection<ProductDoc>("products").findOneAndUpdate(
+      { _id: productId },
+      {
+        $set: {
+          ratingBoost: boostedRating,
+          priorityScore: boostedRating,
+          boostRestoreValue: restoreValue,
+          boostAppliedAt: appliedAt,
+          boostExpiresAt: calculateBoostExpiration(boostDuration as BoostDuration, appliedAt),
+          boostDuration,
+          updatedAt: appliedAt,
+        },
+      },
+      { returnDocument: "after" },
+    );
+
+    return NextResponse.json(updated ? toProductView(updated) : null);
+  }
 
   let finalCategory = selectedCategory;
 
