@@ -715,24 +715,26 @@ export function ProductBookingForm({
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm text-zinc-700">
-              Количество товаров
-            </label>
-            <input
-              type="number"
-              required
-              min={1}
-              max={resolvedQuantity}
-              step={1}
-              value={quantity}
-              onChange={(event) => setQuantity(Number(event.target.value))}
-              className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
-            />
-            <p className="mt-1 text-xs text-zinc-500">
-              Всего в наличии: {resolvedQuantity}
-            </p>
-          </div>
+          {resolvedQuantity > 1 ? (
+            <div>
+              <label className="mb-1.5 block text-sm text-zinc-700">
+                Количество товаров
+              </label>
+              <input
+                type="number"
+                required
+                min={1}
+                max={resolvedQuantity}
+                step={1}
+                value={quantity}
+                onChange={(event) => setQuantity(Number(event.target.value))}
+                className="w-full rounded-xl border border-border-subtle bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent-strong"
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                Всего в наличии: {resolvedQuantity}
+              </p>
+            </div>
+          ) : null}
 
           <div>
             <label className="mb-1.5 block text-sm text-zinc-700">
