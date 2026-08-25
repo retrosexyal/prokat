@@ -227,7 +227,7 @@ export function ProductEditorSection({
           onSuggest={(suggestedCategoryName) =>
             setForm((prev) => ({
               ...prev,
-              category: "",
+              category: suggestedCategoryName ? "" : prev.category,
               suggestedCategoryName,
             }))
           }
