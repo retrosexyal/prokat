@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import clientPromise from "@/lib/mongodb";
 import type { UserType } from "@/types";
+import type { ProductDoc } from "@/types/product";
 
 const LEGAL_DOCUMENTS_VERSION = "2026-05-03";
 
@@ -84,6 +86,23 @@ export async function PATCH(request: Request) {
   if (!updatedUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+
+  await db.collection<ProductDoc>("products").updateMany(
+    { ownerId: updatedUser._id },
+    showPhoneInProducts
+      ? {
+          $set: {
+            ownerPhone: phone,
+            updatedAt: now,
+          },
+        }
+      : {
+          $set: { updatedAt: now },
+          $unset: { ownerPhone: "" },
+        },
+  );
+
+  revalidatePath("/[region]/[category]/[slug]", "page");
 
   return NextResponse.json({
     email: updatedUser.email,
