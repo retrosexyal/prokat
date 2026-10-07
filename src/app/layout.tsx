@@ -1,6 +1,7 @@
 import "./globals.css";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 import type { Metadata } from "next";
 import { SessionProviderClient } from "@/components/providers/SessionProviderClient";
 import { CityCookieSync } from "@/components/CityCookieSync";
@@ -146,6 +147,18 @@ export default function RootLayout({
             </div>
           </footer>
         </SessionProviderClient>
+        {/* Yandex Autoplacement 20193345 */}
+        <Script
+          src="https://yandex.ru/ads/system/context.js"
+          strategy="afterInteractive"
+          async
+        />
+        <Script
+          data-page-id="20193345"
+          src="https://yandex.ru/ads/system/ap-loader.js"
+          strategy="afterInteractive"
+          async
+        />
       </body>
     </html>
   );
